@@ -1,10 +1,10 @@
 # Live Markdown Editor
 
-Write, edit, and preview Markdown in real time with syntax highlighting, formatting shortcuts, find & replace, dark mode, and export options.
+Write, edit, and preview Markdown in real time with syntax highlighting, formatting shortcuts, find & replace, and export options.
 
 ## Live Demo
 
-Open the app here: **[https://mytf49.github.io/<your-repo-name>/](https://mytf49.github.io/<your-repo-name>/)**
+Open the app here: **[https://mytf49.github.io/Live-Markdown-Editor/](https://mytf49.github.io/Live-Markdown-Editor/)**
 
 ## Features
 
@@ -22,4 +22,4 @@ Open the app here: **[https://mytf49.github.io/<your-repo-name>/](https://mytf49
 
 ## Privacy & Data
 
-Your notes, document name, and theme setting are stored locally in your browser on your device—nothing is uploaded to an external server. Export or save a copy of your file before clearing browser data or switching devices.
+Your notes, document name, and theme setting are stored locally in your browser on your device — nothing is uploaded to an external server. Export or save a copy of your file before clearing browser data or switching devices.
