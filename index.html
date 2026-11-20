@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Markdown Editor</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <link id="hljsTheme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --surface-alt: #f0f3f6;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #656d76;
+      --accent: #0969da;
+      --accent-hover: #0550ae;
+      --code-bg: #eff1f3;
+      --blockquote-border: #d0d7de;
+      --drop-bg: rgba(9, 105, 218, 0.08);
+      --split-left: 50%;
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-alt: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #2f81f7;
+      --accent-hover: #58a6ff;
+      --code-bg: #1f242c;
+      --blockquote-border: #3b434b;
+      --drop-bg: rgba(47, 129, 247, 0.12);
+    }
+
+    :root[data-theme="light"] {
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --surface-alt: #f0f3f6;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #656d76;
+      --accent: #0969da;
+      --accent-hover: #0550ae;
+      --code-bg: #eff1f3;
+      --blockquote-border: #d0d7de;
+      --drop-bg: rgba(9, 105, 218, 0.08);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    body.resizing-panes {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    /* Top Toolbar */
+    header {
+      min-height: 52px;
+      padding: 6px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .file-badge {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+      background: var(--surface-alt);
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      max-width: 210px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .file-badge:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--surface-alt);
+    }
+
+    .btn-group button {
+      border: none;
+      border-right: 1px solid var(--border);
+      border-radius: 0;
+      padding: 5px 9px;
+      font-size: 12px;
+    }
+
+    .btn-group button:last-child {
+      border-right: none;
+    }
+
+    .btn-group button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button, .btn-label {
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    button:hover:not(:disabled), .btn-label:hover {
+      border-color: var(--muted);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    /* Collapsible Import / Export Dropdown */
+    .menu-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .menu-panel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      min-width: 195px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+      padding: 6px;
+      z-index: 40;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .menu-dropdown.open .menu-panel {
+      display: flex;
+    }
+
+    .menu-section-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      padding: 4px 8px 2px;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    .menu-item {
+      width: 100%;
+      justify-content: flex-start;
+      background: transparent;
+      border-color: transparent;
+      padding: 6px 8px;
+    }
+
+    .menu-item:hover {
+      background: var(--surface-alt);
+      border-color: var(--border);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    /* Split Workspace */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: var(--split-left) 6px 1fr;
+      min-height: 0;
+      position: relative;
+    }
+
+    main.mode-editor {
+      grid-template-columns: 1fr;
+    }
+
+    main.mode-editor .preview-pane,
+    main.mode-editor .split-resizer {
+      display: none;
+    }
+
+    main.mode-preview {
+      grid-template-columns: 1fr;
+    }
+
+    main.mode-preview .editor-pane,
+    main.mode-preview .split-resizer {
+      display: none;
+    }
+
+    .split-resizer {
+      background: var(--border);
+      cursor: col-resize;
+      position: relative;
+      z-index: 20;
+      transition: background 0.15s;
+      touch-action: none;
+    }
+
+    .split-resizer:hover,
+    body.resizing-panes .split-resizer {
+      background: var(--accent);
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .pane-header {
+      padding: 7px 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .format-mini-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .format-mini-bar button {
+      padding: 2px 7px;
+      font-size: 11px;
+      border-radius: 4px;
+    }
+
+    .editor-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Table Size Picker Popover (anchored top-left of left window) */
+    .table-picker {
+      display: none;
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      z-index: 35;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+      padding: 10px;
+      align-items: center;
+      gap: 6px;
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .table-picker.open {
+      display: flex;
+    }
+
+    .table-picker input[type="number"] {
+      width: 54px;
+      padding: 3px 6px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      color: var(--text);
+    }
+
+    .table-picker button {
+      padding: 3px 8px;
+      font-size: 12px;
+    }
+
+    /* Find & Replace Bar */
+    .find-bar {
+      display: none;
+      padding: 6px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .find-bar.open {
+      display: flex;
+    }
+
+    .find-bar input {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      color: var(--text);
+      min-width: 130px;
+    }
+
+    .find-bar button {
+      padding: 3px 8px;
+      font-size: 11.5px;
+    }
+
+    .find-count {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+
+    /* Heading Outline Bar */
+    .outline-bar {
+      display: none;
+      padding: 6px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .outline-bar.open {
+      display: flex;
+    }
+
+    .outline-chip {
+      padding: 2px 8px;
+      font-size: 11.5px;
+      border-radius: 999px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .outline-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .outline-chip.lvl-2 {
+      margin-left: 8px;
+    }
+
+    .outline-chip.lvl-3 {
+      margin-left: 16px;
+      color: var(--muted);
+    }
+
+    #editor {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      border: none;
+      outline: none;
+      padding: 18px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      background: var(--surface);
+      color: var(--text);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #preview {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+      background: var(--bg);
+      line-height: 1.65;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .fallback-banner {
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+    }
+
+    /* Drag & Drop Overlay */
+    .drop-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--drop-bg);
+      backdrop-filter: blur(2px);
+      border: 3px dashed var(--accent);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent);
+      pointer-events: none;
+    }
+
+    body.dragging .drop-overlay {
+      display: flex;
+    }
+
+    /* Rendered Markdown Styles */
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 {
+      margin-top: 22px;
+      margin-bottom: 10px;
+      font-weight: 600;
+      line-height: 1.25;
+      scroll-margin-top: 12px;
+    }
+
+    .markdown-body > :first-child {
+      margin-top: 0;
+    }
+
+    .markdown-body h1 {
+      font-size: 2em;
+      padding-bottom: 0.3em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .markdown-body h2 {
+      font-size: 1.5em;
+      padding-bottom: 0.25em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .markdown-body h3 { font-size: 1.25em; }
+    .markdown-body h4 { font-size: 1em; }
+
+    .markdown-body p,
+    .markdown-body blockquote,
+    .markdown-body ul,
+    .markdown-body ol,
+    .markdown-body table,
+    .markdown-body pre {
+      margin-bottom: 16px;
+    }
+
+    .markdown-body a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .markdown-body a:hover {
+      text-decoration: underline;
+    }
+
+    .markdown-body ul,
+    .markdown-body ol {
+      padding-left: 24px;
+    }
+
+    .markdown-body li + li {
+      margin-top: 4px;
+    }
+
+    /* Task / Checkbox List Support */
+    .markdown-body ul.contains-task-list {
+      list-style: none;
+      padding-left: 4px;
+    }
+
+    .markdown-body li.task-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .markdown-body input[type="checkbox"] {
+      margin-top: 5px;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .markdown-body blockquote {
+      padding: 4px 16px;
+      color: var(--muted);
+      border-left: 4px solid var(--blockquote-border);
+      background: var(--surface);
+      border-radius: 0 6px 6px 0;
+    }
+
+    .markdown-body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.88em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .markdown-body pre {
+      position: relative;
+      background: var(--code-bg);
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    .markdown-body pre code {
+      background: transparent;
+      padding: 0;
+      font-size: 0.9em;
+      line-height: 1.5;
+    }
+
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 2px 8px;
+      font-size: 11px;
+      border-radius: 5px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      opacity: 0.85;
+    }
+
+    .copy-code-btn:hover {
+      opacity: 1;
+      border-color: var(--accent);
+    }
+
+    .markdown-body hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+
+    .markdown-body table {
+      width: 100%;
+      border-collapse: collapse;
+      display: block;
+      overflow-x: auto;
+    }
+
+    .markdown-body th,
+    .markdown-body td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    .markdown-body th {
+      background: var(--surface);
+      font-weight: 600;
+    }
+
+    .markdown-body tr:nth-child(even) td {
+      background: var(--surface);
+    }
+
+    .markdown-body img {
+      max-width: 100%;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+      }
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: 45vh 55vh;
+      }
+      main .split-resizer {
+        display: none;
+      }
+      main.mode-editor,
+      main.mode-preview {
+        grid-template-rows: 75vh;
+      }
+      .editor-pane {
+        border-bottom: 1px solid var(--border);
+      }
+    }
+
+    @media print {
+      body {
+        height: auto;
+        overflow: visible;
+        background: #fff;
+        color: #000;
+      }
+      header,
+      .editor-pane,
+      .pane-header,
+      .outline-bar,
+      .copy-code-btn,
+      .drop-overlay,
+      .split-resizer {
+        display: none !important;
+      }
+      main {
+        display: block;
+      }
+      #preview {
+        overflow: visible;
+        padding: 0;
+        background: #fff;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="drop-overlay">Drop a .md or .txt file to import</div>
+
+  <header>
+    <div class="brand">
+      <span>Live Markdown Editor</span>
+      <span id="fileNameBadge" class="file-badge" title="Click to rename document">untitled.md</span>
+    </div>
+
+    <div class="toolbar-actions">
+      <div class="btn-group" aria-label="View mode">
+        <button id="modeSplitBtn" type="button" class="active">Split</button>
+        <button id="modeEditorBtn" type="button">Editor</button>
+        <button id="modePreviewBtn" type="button">Preview</button>
+      </div>
+
+      <button id="themeToggleBtn" type="button" title="Toggle Light / Dark theme">Dark Mode</button>
+
+      <div class="menu-dropdown" id="ioMenuDropdown">
+        <button id="ioMenuToggle" class="primary" type="button" aria-expanded="false" aria-controls="ioMenuPanel">
+          Import / Export ▾
+        </button>
+        <div class="menu-panel" id="ioMenuPanel" role="menu">
+          <span class="menu-section-label">Import</span>
+          <label class="btn-label menu-item" for="fileInput" role="menuitem">
+            Import .md / .txt
+          </label>
+          <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown,text/plain" />
+
+          <div class="menu-divider"></div>
+          <span class="menu-section-label">Export</span>
+          <button class="menu-item" type="button" role="menuitem" data-export="copy-md">Copy Markdown</button>
+          <button class="menu-item" type="button" role="menuitem" data-export="copy-html">Copy HTML</button>
+          <button class="menu-item" type="button" role="menuitem" data-export="save-md">Save .md</button>
+          <button class="menu-item" type="button" role="menuitem" data-export="save-txt">Save .txt</button>
+          <button class="menu-item" type="button" role="menuitem" data-export="save-html">Save .html</button>
+          <button class="menu-item" type="button" role="menuitem" data-export="print">Print / PDF</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="workspace">
+    <section class="pane editor-pane">
+      <div class="pane-header">
+        <span>Markdown Source</span>
+        <div class="format-mini-bar">
+          <button type="button" id="newDocBtn" title="Reset Document">New</button>
+          <button type="button" id="undoBtn" title="Undo Snapshot (Ctrl/Cmd+Shift+Z)" disabled>Undo</button>
+          <button type="button" id="redoBtn" title="Redo Snapshot (Ctrl/Cmd+Y)" disabled>Redo</button>
+          <button type="button" data-heading="#" title="Heading 1">H1</button>
+          <button type="button" data-heading="##" title="Heading 2 / Subheading">H2</button>
+          <button type="button" data-heading="###" title="Heading 3 / Subheading">H3</button>
+          <button type="button" data-wrap="**" title="Bold (Ctrl/Cmd+B)">B</button>
+          <button type="button" data-wrap="*" title="Italic (Ctrl/Cmd+I)">I</button>
+          <button type="button" data-wrap="~~" title="Strikethrough">S</button>
+          <button type="button" data-wrap="`" title="Inline Code">&lt;/&gt;</button>
+          <button type="button" data-action="link" title="Insert Link">Link</button>
+          <button type="button" data-action="image" title="Insert Image">Image</button>
+          <button type="button" id="tablePickerBtn" title="Insert Table">Table ▾</button>
+          <button type="button" data-prefix="> " title="Blockquote">Quote</button>
+          <button type="button" data-prefix="- " title="Bullet List">List</button>
+          <button type="button" data-prefix="- [ ] " title="Task Checkbox">Task</button>
+          <button type="button" data-action="codeblock" title="Insert Fenced Code Block">Code Block</button>
+          <button type="button" id="findToggleBtn" title="Find & Replace (Ctrl/Cmd+F)">Find</button>
+          <button type="button" id="syncToggleBtn" title="Toggle synchronized scrolling">Sync: On</button>
+        </div>
+        <div class="editor-meta">
+          <span id="cursorPos">Ln 1, Col 1</span>
+          <span id="stats">0 lines · 0 words · 0 chars</span>
+        </div>
+      </div>
+
+      <div id="tablePicker" class="table-picker" aria-label="Select table size">
+        <label for="tableRowsInput">Rows</label>
+        <input id="tableRowsInput" type="number" min="1" max="20" value="2" />
+        <label for="tableColsInput">Cols</label>
+        <input id="tableColsInput" type="number" min="1" max="12" value="2" />
+        <button id="insertTableBtn" type="button">Insert</button>
+      </div>
+
+      <div id="findBar" class="find-bar" aria-label="Find and Replace">
+        <input id="findInput" type="text" placeholder="Find..." />
+        <input id="replaceInput" type="text" placeholder="Replace with..." />
+        <button id="findPrevBtn" type="button">Prev</button>
+        <button id="findNextBtn" type="button">Next</button>
+        <button id="replaceOneBtn" type="button">Replace</button>
+        <button id="replaceAllBtn" type="button">Replace All</button>
+        <span id="findCount" class="find-count">0 matches</span>
+        <button id="findCloseBtn" type="button" title="Close">✕</button>
+      </div>
+
+      <textarea id="editor" placeholder="Type or paste Markdown here, or drag and drop a .md file anywhere..."></textarea>
+    </section>
+
+    <div id="splitResizer" class="split-resizer" role="separator" aria-orientation="vertical" aria-label="Resize panes (double-click to reset)" title="Drag to resize panes · Double-click to reset"></div>
+
+    <section class="pane preview-pane">
+      <div class="pane-header">
+        <span>Live Preview</span>
+        <div class="format-mini-bar">
+          <button id="outlineToggleBtn" type="button" title="Toggle Heading Outline">Outline</button>
+        </div>
+        <span>Auto-Saved</span>
+      </div>
+      <div id="outlineBar" class="outline-bar" aria-label="Heading Outline"></div>
+      <article id="preview" class="markdown-body"></article>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "live_md_viewer_content_v1";
+    const STORAGE_FILENAME_KEY = "live_md_viewer_filename_v1";
+    const STORAGE_THEME_KEY = "live_md_viewer_theme_v1";
+
+    const DEFAULT_MARKDOWN = `# Notes
+
+Start typing your Markdown here.
+`;
+
+    const workspace = document.getElementById("workspace");
+    const splitResizer = document.getElementById("splitResizer");
+    const editor = document.getElementById("editor");
+    const preview = document.getElementById("preview");
+    const fileInput = document.getElementById("fileInput");
+    const fileNameBadge = document.getElementById("fileNameBadge");
+    const stats = document.getElementById("stats");
+    const cursorPos = document.getElementById("cursorPos");
+    const syncToggleBtn = document.getElementById("syncToggleBtn");
+    const modeSplitBtn = document.getElementById("modeSplitBtn");
+    const modeEditorBtn = document.getElementById("modeEditorBtn");
+    const modePreviewBtn = document.getElementById("modePreviewBtn");
+    const ioMenuDropdown = document.getElementById("ioMenuDropdown");
+    const ioMenuToggle = document.getElementById("ioMenuToggle");
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    const hljsTheme = document.getElementById("hljsTheme");
+    const newDocBtn = document.getElementById("newDocBtn");
+
+    const tablePickerBtn = document.getElementById("tablePickerBtn");
+    const tablePicker = document.getElementById("tablePicker");
+    const tableRowsInput = document.getElementById("tableRowsInput");
+    const tableColsInput = document.getElementById("tableColsInput");
+    const insertTableBtn = document.getElementById("insertTableBtn");
+
+    const undoBtn = document.getElementById("undoBtn");
+    const redoBtn = document.getElementById("redoBtn");
+
+    const findToggleBtn = document.getElementById("findToggleBtn");
+    const findBar = document.getElementById("findBar");
+    const findInput = document.getElementById("findInput");
+    const replaceInput = document.getElementById("replaceInput");
+    const findPrevBtn = document.getElementById("findPrevBtn");
+    const findNextBtn = document.getElementById("findNextBtn");
+    const replaceOneBtn = document.getElementById("replaceOneBtn");
+    const replaceAllBtn = document.getElementById("replaceAllBtn");
+    const findCount = document.getElementById("findCount");
+    const findCloseBtn = document.getElementById("findCloseBtn");
+
+    const outlineToggleBtn = document.getElementById("outlineToggleBtn");
+    const outlineBar = document.getElementById("outlineBar");
+
+    if (typeof window.marked !== "undefined" && typeof window.marked.setOptions === "function") {
+      window.marked.setOptions({
+        gfm: true,
+        breaks: false
+      });
+    }
+
+    let syncScrollEnabled = true;
+    let scrollLockOwner = null;
+    let scrollReleaseTimer = null;
+
+    // Split-Pane Resize Logic
+    let splitPercent = 50;
+    let isResizingSplit = false;
+
+    function setSplitRatio(pct) {
+      const clamped = Math.min(82, Math.max(18, Number(pct) || 50));
+      splitPercent = clamped;
+      document.documentElement.style.setProperty("--split-left", `${clamped}%`);
+    }
+
+    splitResizer.addEventListener("pointerdown", (e) => {
+      if (window.innerWidth <= 820) return;
+      if (workspace.classList.contains("mode-editor") || workspace.classList.contains("mode-preview")) return;
+      e.preventDefault();
+      isResizingSplit = true;
+      splitResizer.setPointerCapture(e.pointerId);
+      document.body.classList.add("resizing-panes");
+    });
+
+    splitResizer.addEventListener("pointermove", (e) => {
+      if (!isResizingSplit) return;
+      const rect = workspace.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const offsetX = e.clientX - rect.left;
+      const pct = (offsetX / rect.width) * 100;
+      setSplitRatio(pct);
+    });
+
+    function stopResizingSplit() {
+      if (!isResizingSplit) return;
+      isResizingSplit = false;
+      document.body.classList.remove("resizing-panes");
+    }
+
+    splitResizer.addEventListener("pointerup", stopResizingSplit);
+    splitResizer.addEventListener("pointercancel", stopResizingSplit);
+    splitResizer.addEventListener("dblclick", () => setSplitRatio(50));
+
+    // Document Rename Helper
+    function renameDocument(newName) {
+      const cleaned = String(newName ?? "")
+        .trim()
+        .replace(/[\\/:*?"<>|]/g, "")
+        .slice(0, 100);
+      const finalName = cleaned || "untitled.md";
+      fileNameBadge.textContent = finalName;
+      saveToStorage();
+    }
+
+    fileNameBadge.addEventListener("click", () => {
+      const current = fileNameBadge.textContent || "untitled.md";
+      const next = window.prompt("Rename document:", current);
+      if (next !== null) {
+        renameDocument(next);
+      }
+    });
+
+    // Reset / New Document
+    newDocBtn.addEventListener("click", () => {
+      if (editor.value.trim() && !window.confirm("Start a new document and replace current notes?")) {
+        return;
+      }
+      editor.value = DEFAULT_MARKDOWN;
+      fileNameBadge.textContent = "untitled.md";
+      renderMarkdown();
+    });
+
+    // Cursor Line & Column Indicator
+    function updateCursorPosition() {
+      const pos = editor.selectionStart ?? 0;
+      const before = editor.value.slice(0, pos);
+      const lines = before.split("\n");
+      const line = lines.length;
+      const col = lines[lines.length - 1].length + 1;
+      cursorPos.textContent = `Ln ${line}, Col ${col}`;
+    }
+
+    editor.addEventListener("click", updateCursorPosition);
+    editor.addEventListener("keyup", updateCursorPosition);
+    editor.addEventListener("select", updateCursorPosition);
+
+    // Undo / Redo Snapshot State
+    const historyStack = [];
+    let historyIndex = -1;
+    const MAX_HISTORY = 100;
+
+    function updateHistoryButtons() {
+      undoBtn.disabled = historyIndex <= 0;
+      redoBtn.disabled = historyIndex >= historyStack.length - 1;
+    }
+
+    function pushHistorySnapshot(value = editor.value, selectionStart = editor.selectionStart, selectionEnd = editor.selectionEnd) {
+      const current = historyStack[historyIndex];
+      if (current && current.value === value) return;
+
+      if (historyIndex < historyStack.length - 1) {
+        historyStack.splice(historyIndex + 1);
+      }
+
+      historyStack.push({ value, selectionStart, selectionEnd });
+      if (historyStack.length > MAX_HISTORY) {
+        historyStack.shift();
+      } else {
+        historyIndex++;
+      }
+      updateHistoryButtons();
+    }
+
+    function applySnapshot(snap) {
+      if (!snap) return;
+      editor.value = snap.value;
+      editor.focus();
+      editor.selectionStart = snap.selectionStart;
+      editor.selectionEnd = snap.selectionEnd;
+      updateHistoryButtons();
+      renderMarkdown({ preserveScroll: true, recordHistory: false });
+    }
+
+    function undoSnapshot() {
+      if (historyIndex <= 0) return;
+      historyIndex--;
+      applySnapshot(historyStack[historyIndex]);
+    }
+
+    function redoSnapshot() {
+      if (historyIndex >= historyStack.length - 1) return;
+      historyIndex++;
+      applySnapshot(historyStack[historyIndex]);
+    }
+
+    undoBtn.addEventListener("click", undoSnapshot);
+    redoBtn.addEventListener("click", redoSnapshot);
+
+    // Simplified Light / Dark Mode Switch (no unnecessary Markdown re-render)
+    function setPreviewTheme(theme) {
+      const mode = theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", mode);
+      themeToggleBtn.textContent = mode === "dark" ? "Light Mode" : "Dark Mode";
+      try {
+        localStorage.setItem(STORAGE_THEME_KEY, mode);
+      } catch {
+        // Ignore storage errors
+      }
+      if (hljsTheme) {
+        hljsTheme.href = mode === "dark"
+          ? "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css"
+          : "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css";
+      }
+    }
+
+    themeToggleBtn.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      setPreviewTheme(current === "dark" ? "light" : "dark");
+    });
+
+    // Collapsible Import / Export Dropdown
+    function setIoMenuOpen(open) {
+      ioMenuDropdown.classList.toggle("open", open);
+      ioMenuToggle.setAttribute("aria-expanded", String(open));
+    }
+
+    ioMenuToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = ioMenuDropdown.classList.contains("open");
+      setIoMenuOpen(!isOpen);
+    });
+
+    function setTablePickerOpen(open) {
+      tablePicker.classList.toggle("open", open);
+      if (open) {
+        tableRowsInput.focus();
+      }
+    }
+
+    tablePickerBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setTablePickerOpen(!tablePicker.classList.contains("open"));
+    });
+
+    window.addEventListener("resize", () => {
+      stopResizingSplit();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!ioMenuDropdown.contains(e.target)) {
+        setIoMenuOpen(false);
+      }
+      if (!tablePicker.contains(e.target) && e.target !== tablePickerBtn) {
+        setTablePickerOpen(false);
+      }
+    });
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatFallbackInline(text) {
+      let out = escapeHtml(text);
+      out = out.replace(/`([^`\n]+)`/g, (_, code) => `<code>${code}</code>`);
+      out = out.replace(/\*\*\*([^*\n]+)\*\*\*/g, (_, inner) => `<strong><em>${inner}</em></strong>`);
+      out = out.replace(/\*\*([^*\n]+)\*\*/g, (_, inner) => `<strong>${inner}</strong>`);
+      out = out.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, (_, pre, inner) => `${pre}<em>${inner}</em>`);
+      out = out.replace(/~~([^~\n]+)~~/g, (_, inner) => `<del>${inner}</del>`);
+      return out;
+    }
+
+    function fallbackMarkdownToHtml(raw) {
+      const lines = raw.split("\n");
+      const html = [];
+      let inCodeBlock = false;
+      let inList = false;
+
+      for (const line of lines) {
+        if (/^\s*(`{3,}|~{3,})/.test(line)) {
+          if (inList) {
+            html.push("</ul>");
+            inList = false;
+          }
+          if (!inCodeBlock) {
+            inCodeBlock = true;
+            html.push("<pre><code>");
+          } else {
+            inCodeBlock = false;
+            html.push("</code></pre>");
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          html.push(escapeHtml(line) + "\n");
+          continue;
+        }
+
+        const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+        if (headingMatch) {
+          if (inList) {
+            html.push("</ul>");
+            inList = false;
+          }
+          const level = headingMatch[1].length;
+          html.push(`<h${level}>${formatFallbackInline(headingMatch[2])}</h${level}>`);
+          continue;
+        }
+
+        const taskMatch = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.*)$/);
+        if (taskMatch) {
+          if (!inList) {
+            html.push('<ul class="contains-task-list">');
+            inList = true;
+          }
+          const checked = taskMatch[1].toLowerCase() === "x" ? " checked" : "";
+          html.push(
+            `<li class="task-list-item"><input type="checkbox"${checked} /><span>${formatFallbackInline(taskMatch[2])}</span></li>`
+          );
+          continue;
+        }
+
+        const listMatch = line.match(/^\s*[-*+]\s+(.*)$/);
+        if (listMatch) {
+          if (!inList) {
+            html.push("<ul>");
+            inList = true;
+          }
+          html.push(`<li>${formatFallbackInline(listMatch[1])}</li>`);
+          continue;
+        }
+
+        if (inList) {
+          html.push("</ul>");
+          inList = false;
+        }
+
+        if (line.trim() === "") {
+          continue;
+        }
+
+        html.push(`<p>${formatFallbackInline(line)}</p>`);
+      }
+
+      if (inList) html.push("</ul>");
+      if (inCodeBlock) html.push("</code></pre>");
+      return html.join("\n");
+    }
+
+    function updateStats(text) {
+      const lines = text ? text.split("\n").length : 0;
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      const chars = text.length;
+      stats.textContent = `${lines} lines · ${words} words · ${chars} chars`;
+    }
+
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, editor.value);
+        localStorage.setItem(STORAGE_FILENAME_KEY, fileNameBadge.textContent || "untitled.md");
+      } catch {
+        // Ignore storage quota or privacy mode errors
+      }
+    }
+
+    function getTaskLineIndices(markdown) {
+      const indices = [];
+      const lines = markdown.split("\n");
+      let activeFence = null;
+      let activeFenceLen = 0;
+
+      lines.forEach((line, i) => {
+        const fenceMatch = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
+        if (fenceMatch) {
+          const marker = fenceMatch[1][0];
+          const len = fenceMatch[1].length;
+          const info = fenceMatch[2].trim();
+
+          if (!activeFence) {
+            activeFence = marker;
+            activeFenceLen = len;
+            return;
+          } else if (marker === activeFence && len >= activeFenceLen) {
+            if (!info) {
+              activeFence = null;
+              activeFenceLen = 0;
+            } else {
+              activeFence = marker;
+              activeFenceLen = len;
+            }
+            return;
+          }
+        }
+
+        if (activeFence) return;
+
+        if (/^\s*(?:[-*+]|\d+\.)\s+\[[ xX]\]\s+/.test(line)) {
+          indices.push(i);
+        }
+      });
+
+      return indices;
+    }
+
+    // Heading Outline & Jump (fence-marker aware)
+    function extractHeadings(markdown) {
+      const headings = [];
+      const lines = markdown.split("\n");
+      let activeFence = null;
+      let activeFenceLen = 0;
+
+      lines.forEach((line, lineIndex) => {
+        const fenceMatch = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
+        if (fenceMatch) {
+          const marker = fenceMatch[1][0];
+          const len = fenceMatch[1].length;
+          const info = fenceMatch[2].trim();
+
+          if (!activeFence) {
+            activeFence = marker;
+            activeFenceLen = len;
+            return;
+          } else if (marker === activeFence && len >= activeFenceLen) {
+            if (!info) {
+              activeFence = null;
+              activeFenceLen = 0;
+            } else {
+              activeFence = marker;
+              activeFenceLen = len;
+            }
+            return;
+          }
+        }
+        if (activeFence) return;
+
+        const match = line.match(/^(#{1,3})\s+(.+?)\s*#*$/);
+        if (match) {
+          headings.push({
+            level: match[1].length,
+            text: match[2].trim(),
+            lineIndex
+          });
+        }
+      });
+
+      return headings;
+    }
+
+    function jumpToHeading(heading, occurrenceIndex = 0) {
+      const lines = editor.value.split("\n");
+      let charPos = 0;
+      for (let i = 0; i < heading.lineIndex && i < lines.length; i++) {
+        charPos += lines[i].length + 1;
+      }
+
+      editor.focus();
+      editor.setSelectionRange(charPos, charPos + (lines[heading.lineIndex]?.length || 0));
+      updateCursorPosition();
+      const lineRatio = lines.length > 1 ? heading.lineIndex / (lines.length - 1) : 0;
+      editor.scrollTop = lineRatio * Math.max(0, editor.scrollHeight - editor.clientHeight);
+
+      const selector = `h${heading.level}`;
+      const candidates = Array.from(preview.querySelectorAll(selector)).filter(
+        (el) => (el.textContent || "").trim() === heading.text
+      );
+      const targetEl = candidates[occurrenceIndex] || candidates[0];
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function renderOutline(markdown) {
+      const headings = extractHeadings(markdown);
+      outlineBar.innerHTML = "";
+
+      if (!headings.length) {
+        const empty = document.createElement("span");
+        empty.className = "find-count";
+        empty.textContent = "No #–### headings found";
+        outlineBar.appendChild(empty);
+        return;
+      }
+
+      const seenCounts = new Map();
+      headings.forEach((h) => {
+        const key = `${h.level}:${h.text}`;
+        const occ = seenCounts.get(key) || 0;
+        seenCounts.set(key, occ + 1);
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `outline-chip lvl-${h.level}`;
+        btn.textContent = `${"#".repeat(h.level)} ${h.text}`;
+        btn.addEventListener("click", () => jumpToHeading(h, occ));
+        outlineBar.appendChild(btn);
+      });
+    }
+
+    outlineToggleBtn.addEventListener("click", () => {
+      const open = !outlineBar.classList.contains("open");
+      outlineBar.classList.toggle("open", open);
+      if (open) renderOutline(editor.value);
+    });
+
+    // Copy Code Block Buttons
+    function addCopyCodeButtons() {
+      preview.querySelectorAll("pre").forEach((pre) => {
+        if (pre.querySelector(".copy-code-btn")) return;
+        const codeEl = pre.querySelector("code");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "copy-code-btn";
+        btn.textContent = "Copy";
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const text = codeEl ? codeEl.textContent || "" : pre.textContent || "";
+          await copyToClipboard(text, btn);
+        });
+        pre.appendChild(btn);
+      });
+    }
+
+    function highlightCodeBlocks() {
+      if (typeof window.hljs === "undefined" || typeof window.hljs.highlightElement !== "function") {
+        return;
+      }
+      preview.querySelectorAll("pre code").forEach((block) => {
+        block.removeAttribute("data-highlighted");
+        window.hljs.highlightElement(block);
+      });
+    }
+
+    function renderMarkdown({ preserveScroll = false, save = true, recordHistory = true } = {}) {
+      const prevScrollTop = preserveScroll ? preview.scrollTop : 0;
+      const raw = editor.value;
+      updateStats(raw);
+      updateCursorPosition();
+      if (save) saveToStorage();
+      if (recordHistory) pushHistorySnapshot(raw, editor.selectionStart, editor.selectionEnd);
+      if (outlineBar.classList.contains("open")) renderOutline(raw);
+      if (findBar.classList.contains("open")) findInEditor(findInput.value, { keepIndex: true, selectMatch: false });
+
+      try {
+        const hasMarked = typeof window.marked !== "undefined" && typeof window.marked.parse === "function";
+        const hasPurify = typeof window.DOMPurify !== "undefined" && typeof window.DOMPurify.sanitize === "function";
+
+        let renderedHtml;
+        if (hasMarked) {
+          const dirtyHtml = window.marked.parse(raw);
+          renderedHtml = hasPurify
+            ? window.DOMPurify.sanitize(dirtyHtml, {
+                ADD_ATTR: ["checked", "disabled", "type", "class"]
+              })
+            : dirtyHtml;
+        } else {
+          renderedHtml =
+            `<div class="fallback-banner">Offline/CDN fallback active: external Markdown parser did not load. Showing preview.</div>` +
+            fallbackMarkdownToHtml(raw);
+        }
+
+        preview.innerHTML = renderedHtml;
+        highlightCodeBlocks();
+        addCopyCodeButtons();
+
+        // Enable task checkboxes in preview and sync back to Markdown source
+        const checkboxes = preview.querySelectorAll('input[type="checkbox"]');
+        const taskLines = getTaskLineIndices(raw);
+
+        checkboxes.forEach((cb, idx) => {
+          cb.disabled = false;
+          cb.dataset.taskIndex = String(idx);
+          cb.addEventListener("change", () => {
+            const taskIdx = Number(cb.dataset.taskIndex);
+            const lineIdx = taskLines[taskIdx];
+            if (lineIdx === undefined) return;
+
+            const lines = editor.value.split("\n");
+            lines[lineIdx] = lines[lineIdx].replace(
+              /(\s*(?:[-*+]|\d+\.)\s*\[)[ xX](\])/,
+              `$1${cb.checked ? "x" : " "}$2`
+            );
+            editor.value = lines.join("\n");
+            renderMarkdown({ preserveScroll: true });
+          });
+        });
+
+        if (preserveScroll) {
+          preview.scrollTop = prevScrollTop;
+        }
+      } catch (err) {
+        preview.innerHTML = `<div class="fallback-banner">Preview error: ${escapeHtml(String(err?.message || err))}</div>`;
+      }
+    }
+
+    // Find & Replace
+    let matchPositions = [];
+    let currentMatchIdx = -1;
+
+    function selectCurrentMatch() {
+      if (!matchPositions.length || currentMatchIdx < 0) {
+        findCount.textContent = "0 matches";
+        return;
+      }
+      const [start, end] = matchPositions[currentMatchIdx];
+      editor.focus();
+      editor.setSelectionRange(start, end);
+      updateCursorPosition();
+      const beforeText = editor.value.slice(0, start);
+      const lineNum = beforeText.split("\n").length - 1;
+      const totalLines = Math.max(1, editor.value.split("\n").length - 1);
+      editor.scrollTop = (lineNum / totalLines) * Math.max(0, editor.scrollHeight - editor.clientHeight);
+      findCount.textContent = `${currentMatchIdx + 1} of ${matchPositions.length}`;
+    }
+
+    function findInEditor(query, { keepIndex = false, selectMatch = true } = {}) {
+      matchPositions = [];
+      if (!query) {
+        currentMatchIdx = -1;
+        findCount.textContent = "0 matches";
+        return;
+      }
+
+      const hay = editor.value.toLowerCase();
+      const needle = query.toLowerCase();
+      let pos = hay.indexOf(needle);
+      while (pos !== -1) {
+        matchPositions.push([pos, pos + needle.length]);
+        pos = hay.indexOf(needle, pos + needle.length);
+      }
+
+      if (!matchPositions.length) {
+        currentMatchIdx = -1;
+        findCount.textContent = "0 matches";
+        return;
+      }
+
+      if (!keepIndex || currentMatchIdx < 0 || currentMatchIdx >= matchPositions.length) {
+        currentMatchIdx = 0;
+      }
+
+      if (selectMatch) {
+        selectCurrentMatch();
+      } else {
+        findCount.textContent = `${currentMatchIdx + 1} of ${matchPositions.length}`;
+      }
+    }
+
+    function replaceNext() {
+      const query = findInput.value;
+      if (!query) return;
+      if (!matchPositions.length) {
+        findInEditor(query);
+        if (!matchPositions.length) return;
+      }
+
+      const [start, end] = matchPositions[currentMatchIdx];
+      const replacement = replaceInput.value;
+      editor.value = editor.value.slice(0, start) + replacement + editor.value.slice(end);
+      renderMarkdown({ preserveScroll: true });
+      findInEditor(query, { keepIndex: true, selectMatch: true });
+    }
+
+    function replaceAll() {
+      const query = findInput.value;
+      if (!query) return;
+      findInEditor(query, { selectMatch: false });
+      if (!matchPositions.length) return;
+
+      const replacement = replaceInput.value;
+      let updated = editor.value;
+      for (let i = matchPositions.length - 1; i >= 0; i--) {
+        const [start, end] = matchPositions[i];
+        updated = updated.slice(0, start) + replacement + updated.slice(end);
+      }
+      editor.value = updated;
+      currentMatchIdx = -1;
+      renderMarkdown({ preserveScroll: true });
+      findInEditor(query, { selectMatch: false });
+    }
+
+    function openFindBar(focusInput = true) {
+      findBar.classList.add("open");
+      if (focusInput) {
+        findInput.focus();
+        findInput.select();
+      }
+      findInEditor(findInput.value, { keepIndex: true, selectMatch: false });
+    }
+
+    function closeFindBar() {
+      findBar.classList.remove("open");
+      editor.focus();
+    }
+
+    findToggleBtn.addEventListener("click", () => {
+      if (findBar.classList.contains("open")) closeFindBar();
+      else openFindBar(true);
+    });
+    findCloseBtn.addEventListener("click", closeFindBar);
+    findInput.addEventListener("input", () => findInEditor(findInput.value));
+    findInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!matchPositions.length) {
+          findInEditor(findInput.value);
+          return;
+        }
+        if (e.shiftKey) {
+          currentMatchIdx = (currentMatchIdx - 1 + matchPositions.length) % matchPositions.length;
+        } else {
+          currentMatchIdx = (currentMatchIdx + 1) % matchPositions.length;
+        }
+        selectCurrentMatch();
+      }
+    });
+    findNextBtn.addEventListener("click", () => {
+      if (!matchPositions.length) return findInEditor(findInput.value);
+      currentMatchIdx = (currentMatchIdx + 1) % matchPositions.length;
+      selectCurrentMatch();
+    });
+    findPrevBtn.addEventListener("click", () => {
+      if (!matchPositions.length) return findInEditor(findInput.value);
+      currentMatchIdx = (currentMatchIdx - 1 + matchPositions.length) % matchPositions.length;
+      selectCurrentMatch();
+    });
+    replaceOneBtn.addEventListener("click", replaceNext);
+    replaceAllBtn.addEventListener("click", replaceAll);
+
+    // Formatting & Insert Helpers
+    function insertHeading(hashes) {
+      const start = editor.selectionStart;
+      const val = editor.value;
+      const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+      const lineEndIdx = val.indexOf("\n", start);
+      const lineEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
+      const currentLine = val.slice(lineStart, lineEnd);
+
+      const stripped = currentLine.replace(/^#{1,6}\s*/, "");
+      const placeholder = stripped || "Heading";
+      const updatedLine = `${hashes} ${placeholder}`;
+
+      editor.value = val.slice(0, lineStart) + updatedLine + val.slice(lineEnd);
+      editor.focus();
+
+      const textStart = lineStart + hashes.length + 1;
+      editor.selectionStart = textStart;
+      editor.selectionEnd = textStart + placeholder.length;
+
+      renderMarkdown({ preserveScroll: true });
+    }
+
+    function prefixCurrentLine(prefix) {
+      const start = editor.selectionStart;
+      const val = editor.value;
+      const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+      const lineEndIdx = val.indexOf("\n", start);
+      const lineEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
+      const currentLine = val.slice(lineStart, lineEnd);
+
+      const content = currentLine.trim() ? currentLine : "item";
+      const updatedLine = `${prefix}${content}`;
+
+      editor.value = val.slice(0, lineStart) + updatedLine + val.slice(lineEnd);
+      editor.focus();
+
+      const textStart = lineStart + prefix.length;
+      editor.selectionStart = textStart;
+      editor.selectionEnd = textStart + content.length;
+
+      renderMarkdown({ preserveScroll: true });
+    }
+
+    function insertLink() {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const val = editor.value;
+      const selected = val.slice(start, end) || "link text";
+      const snippet = `[${selected}](https://example.com)`;
+
+      editor.value = val.slice(0, start) + snippet + val.slice(end);
+      editor.focus();
+      const urlStart = start + selected.length + 3;
+      editor.selectionStart = urlStart;
+      editor.selectionEnd = urlStart + "https://example.com".length;
+
+      renderMarkdown({ preserveScroll: true });
+    }
+
+    function insertImage() {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const val = editor.value;
+      const selected = val.slice(start, end) || "alt text";
+      const snippet = `![${selected}](https://example.com/image.png)`;
+
+      editor.value = val.slice(0, start) + snippet + val.slice(end);
+      editor.focus();
+      const urlStart = start + selected.length + 4;
+      editor.selectionStart = urlStart;
+      editor.selectionEnd = urlStart + "https://example.com/image.png".length;
+
+      renderMarkdown({ preserveScroll: true });
+    }
+
+    function insertTable(rows = 2, cols = 2) {
+      const r = Math.min(20, Math.max(1, Number(rows) || 2));
+      const c = Math.min(12, Math.max(1, Number(cols) || 2));
+      const bodyRowCount = Math.max(0, r - 1);
+
+      const headers = Array.from({ length: c }, (_, i) => `Col ${i + 1}`);
+      const headerLine = `| ${headers.join(" | ")} |`;
+      const dividerLine = `| ${Array.from({ length: c }, () => "---").join(" | ")} |`;
+      const bodyLines = Array.from({ length: bodyRowCount }, (_, rowIdx) => {
+        const cells = Array.from({ length: c }, (_, colIdx) => `R${rowIdx + 2}C${colIdx + 1}`);
+        return `| ${cells.join(" | ")} |`;
+      });
+
+      const snippet = bodyLines.length
+        ? `${headerLine}\n${dividerLine}\n${bodyLines.join("\n")}\n`
+        : `${headerLine}\n${dividerLine}\n`;
+
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const val = editor.value;
+
+      editor.value = val.slice(0, start) + snippet + val.slice(end);
+      editor.focus();
+      editor.selectionStart = start + 2;
+      editor.selectionEnd = start + 2 + headers[0].length;
+
+      setTablePickerOpen(false);
+      renderMarkdown({ preserveScroll: true });
+    }
+
+    function submitTablePicker() {
+      insertTable(tableRowsInput.value, tableColsInput.value);
+    }
+
+    insertTableBtn.addEventListener("click", submitTablePicker);
+    tableRowsInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitTablePicker();
+      }
+    });
+    tableColsInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitTablePicker();
+      }
+    });
+
+    function insertCodeBlock() {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const val = editor.value;
+      const selected = val.slice(start, end) || "// code here";
+      const snippet = `\`\`\`js\n${selected}\n\`\`\``;
+
+      editor.value = val.slice(0, start) + snippet + val.slice(end);
+      editor.focus();
+      const codeStart = start + 6;
+      editor.selectionStart = codeStart;
+      editor.selectionEnd = codeStart + selected.length;
+
+      renderMarkdown({ preserveScroll: true });
+    }
+
+    function wrapSelection(prefix, suffix = prefix) {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const value = editor.value;
+      const selected = value.slice(start, end);
+      const placeholder = selected || "text";
+      const replacement = `${prefix}${placeholder}${suffix}`;
+
+      editor.value = value.slice(0, start) + replacement + value.slice(end);
+      editor.focus();
+
+      editor.selectionStart = start + prefix.length;
+      editor.selectionEnd = start + prefix.length + placeholder.length;
+
+      renderMarkdown({ preserveScroll: true });
+    }
+
+    // Smart List Continuation on Enter
+    function handleListEnter(e) {
+      if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false;
+
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      if (start !== end) return false;
+
+      const val = editor.value;
+      const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+      const lineEndIdx = val.indexOf("\n", start);
+      const lineEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
+      const currentLine = val.slice(lineStart, lineEnd);
+
+      const taskEmptyMatch = currentLine.match(/^(\s*)([-*+])\s+\[[ xX]\]\s*$/);
+      if (taskEmptyMatch) {
+        e.preventDefault();
+        const cleanedLine = `${taskEmptyMatch[1]}`;
+        editor.value = val.slice(0, lineStart) + cleanedLine + val.slice(lineEnd);
+        editor.selectionStart = editor.selectionEnd = lineStart + cleanedLine.length;
+        renderMarkdown({ preserveScroll: true });
+        return true;
+      }
+
+      const taskMatch = currentLine.match(/^(\s*)([-*+])\s+\[[ xX]\]\s+(.*)$/);
+      if (taskMatch) {
+        e.preventDefault();
+        const nextPrefix = `\n${taskMatch[1]}${taskMatch[2]} [ ] `;
+        editor.value = val.slice(0, start) + nextPrefix + val.slice(end);
+        editor.selectionStart = editor.selectionEnd = start + nextPrefix.length;
+        renderMarkdown({ preserveScroll: true });
+        return true;
+      }
+
+      const bulletEmptyMatch = currentLine.match(/^(\s*)([-*+])\s*$/);
+      if (bulletEmptyMatch) {
+        e.preventDefault();
+        const cleanedLine = `${bulletEmptyMatch[1]}`;
+        editor.value = val.slice(0, lineStart) + cleanedLine + val.slice(lineEnd);
+        editor.selectionStart = editor.selectionEnd = lineStart + cleanedLine.length;
+        renderMarkdown({ preserveScroll: true });
+        return true;
+      }
+
+      const bulletMatch = currentLine.match(/^(\s*)([-*+])\s+(.*)$/);
+      if (bulletMatch) {
+        e.preventDefault();
+        const nextPrefix = `\n${bulletMatch[1]}${bulletMatch[2]} `;
+        editor.value = val.slice(0, start) + nextPrefix + val.slice(end);
+        editor.selectionStart = editor.selectionEnd = start + nextPrefix.length;
+        renderMarkdown({ preserveScroll: true });
+        return true;
+      }
+
+      return false;
+    }
+
+    document.querySelectorAll(".format-mini-bar button[data-heading]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        insertHeading(btn.getAttribute("data-heading"));
+      });
+    });
+
+    document.querySelectorAll(".format-mini-bar button[data-prefix]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        prefixCurrentLine(btn.getAttribute("data-prefix"));
+      });
+    });
+
+    document.querySelectorAll(".format-mini-bar button[data-wrap]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        wrapSelection(btn.getAttribute("data-wrap"));
+      });
+    });
+
+    document.querySelectorAll(".format-mini-bar button[data-action]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.getAttribute("data-action");
+        if (action === "link") insertLink();
+        if (action === "image") insertImage();
+        if (action === "codeblock") insertCodeBlock();
+      });
+    });
+
+    editor.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        openFindBar(true);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        wrapSelection("**");
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        wrapSelection("*");
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z" && historyIndex > 0) {
+        const beforeVal = editor.value;
+        requestAnimationFrame(() => {
+          if (editor.value === beforeVal && historyIndex > 0) {
+            undoSnapshot();
+          }
+        });
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redoSnapshot();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undoSnapshot();
+        return;
+      }
+
+      if (handleListEnter(e)) return;
+
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const val = editor.value;
+
+        if (e.shiftKey) {
+          const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+          const linePrefix = val.slice(lineStart, lineStart + 2);
+          if (linePrefix === "  ") {
+            editor.value = val.slice(0, lineStart) + val.slice(lineStart + 2);
+            editor.selectionStart = Math.max(lineStart, start - 2);
+            editor.selectionEnd = Math.max(lineStart, end - 2);
+            renderMarkdown({ preserveScroll: true });
+          }
+        } else {
+          editor.value = val.slice(0, start) + "  " + val.slice(end);
+          editor.selectionStart = editor.selectionEnd = start + 2;
+          renderMarkdown({ preserveScroll: true });
+        }
+      }
+    });
+
+    // Synchronized scrolling with jitter guard
+    function applySyncScroll(source, target, ownerName) {
+      if (!syncScrollEnabled) return;
+      if (scrollLockOwner && scrollLockOwner !== ownerName) return;
+
+      const maxSource = source.scrollHeight - source.clientHeight;
+      const maxTarget = target.scrollHeight - target.clientHeight;
+      if (maxSource <= 0 || maxTarget <= 0) return;
+
+      const ratio = source.scrollTop / maxSource;
+      const desiredTop = ratio * maxTarget;
+      if (Math.abs(target.scrollTop - desiredTop) < 1) return;
+
+      scrollLockOwner = ownerName;
+      target.scrollTop = desiredTop;
+      clearTimeout(scrollReleaseTimer);
+      scrollReleaseTimer = setTimeout(() => {
+        scrollLockOwner = null;
+      }, 40);
+    }
+
+    editor.addEventListener("scroll", () => applySyncScroll(editor, preview, "editor"));
+    preview.addEventListener("scroll", () => applySyncScroll(preview, editor, "preview"));
+
+    syncToggleBtn.addEventListener("click", () => {
+      syncScrollEnabled = !syncScrollEnabled;
+      syncToggleBtn.textContent = `Sync: ${syncScrollEnabled ? "On" : "Off"}`;
+    });
+
+    // View mode switcher
+    function setViewMode(mode) {
+      stopResizingSplit();
+      workspace.classList.remove("mode-editor", "mode-preview");
+      modeSplitBtn.classList.remove("active");
+      modeEditorBtn.classList.remove("active");
+      modePreviewBtn.classList.remove("active");
+
+      if (mode === "editor") {
+        workspace.classList.add("mode-editor");
+        modeEditorBtn.classList.add("active");
+      } else if (mode === "preview") {
+        workspace.classList.add("mode-preview");
+        modePreviewBtn.classList.add("active");
+      } else {
+        modeSplitBtn.classList.add("active");
+      }
+    }
+
+    modeSplitBtn.addEventListener("click", () => setViewMode("split"));
+    modeEditorBtn.addEventListener("click", () => setViewMode("editor"));
+    modePreviewBtn.addEventListener("click", () => setViewMode("preview"));
+
+    function isSupportedTextFile(file) {
+      const validExt = /\.(md|markdown|txt)$/i.test(file.name);
+      const validMime = file.type.startsWith("text/") || file.type === "";
+      return validExt || validMime;
+    }
+
+    function loadFile(file) {
+      if (!file) return;
+      if (!isSupportedTextFile(file)) {
+        alert(`"${file.name}" doesn't look like a Markdown or text file (.md, .markdown, .txt).`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        editor.value = String(e.target?.result ?? "");
+        fileNameBadge.textContent = file.name;
+        renderMarkdown();
+      };
+      reader.readAsText(file);
+    }
+
+    editor.addEventListener("input", () => renderMarkdown({ preserveScroll: true }));
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      loadFile(file);
+      fileInput.value = "";
+      setIoMenuOpen(false);
+    });
+
+    // Drag and drop support
+    let dragCounter = 0;
+
+    function resetDragState() {
+      dragCounter = 0;
+      document.body.classList.remove("dragging");
+    }
+
+    window.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      dragCounter++;
+      document.body.classList.add("dragging");
+    });
+
+    window.addEventListener("dragover", (e) => {
+      e.preventDefault();
+    });
+
+    window.addEventListener("dragleave", () => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        resetDragState();
+      }
+    });
+
+    window.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer?.files?.[0];
+      resetDragState();
+      loadFile(file);
+    });
+
+    window.addEventListener("blur", () => {
+      stopResizingSplit();
+      resetDragState();
+      setIoMenuOpen(false);
+      setTablePickerOpen(false);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        stopResizingSplit();
+        resetDragState();
+        setIoMenuOpen(false);
+        setTablePickerOpen(false);
+        if (findBar.classList.contains("open")) closeFindBar();
+      }
+    });
+
+    // Export Module
+    function getExportFileName(extension) {
+      const raw = (fileNameBadge.textContent || "document").trim() || "document";
+      const base = raw.replace(/\.(md|markdown|txt|html)$/i, "") || "document";
+      return `${base}.${extension}`;
+    }
+
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function buildStandaloneHtmlDocument(bodyHtml, title) {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 820px; margin: 40px auto; padding: 0 20px; line-height: 1.65; color: #1f2328; }
+    pre { background: #f6f8fa; padding: 14px; border-radius: 8px; overflow-x: auto; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f0f3f6; padding: 2px 5px; border-radius: 4px; }
+    pre code { background: transparent; padding: 0; }
+    blockquote { border-left: 4px solid #d0d7de; padding: 4px 16px; color: #656d76; margin: 16px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    th, td { border: 1px solid #d0d7de; padding: 8px 12px; text-align: left; }
+  </style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`;
+    }
+
+    function flashExportLabel(btn, message) {
+      const prev = btn.textContent;
+      btn.textContent = message;
+      setTimeout(() => {
+        btn.textContent = prev;
+      }, 1200);
+    }
+
+    function fallbackExecCommandCopy(text) {
+      const temp = document.createElement("textarea");
+      temp.value = text;
+      temp.setAttribute("readonly", "");
+      temp.style.position = "fixed";
+      temp.style.top = "0";
+      temp.style.left = "0";
+      temp.style.opacity = "0";
+      document.body.appendChild(temp);
+      temp.focus();
+      temp.select();
+      temp.setSelectionRange(0, temp.value.length);
+
+      let ok = false;
+      try {
+        ok = document.execCommand("copy");
+      } catch {
+        ok = false;
+      }
+
+      temp.remove();
+      return ok;
+    }
+
+    async function copyToClipboard(text, btn) {
+      let copied = false;
+
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function" && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          copied = true;
+        } catch {
+          copied = false;
+        }
+      }
+
+      if (!copied) {
+        copied = fallbackExecCommandCopy(text);
+      }
+
+      flashExportLabel(btn, copied ? "Copied!" : "Copy failed");
+    }
+
+    async function handleExportAction(action, btn) {
+      switch (action) {
+        case "copy-md":
+          await copyToClipboard(editor.value, btn);
+          break;
+        case "copy-html":
+          await copyToClipboard(preview.innerHTML, btn);
+          break;
+        case "save-md":
+          downloadFile(editor.value, getExportFileName("md"), "text/markdown;charset=utf-8");
+          setIoMenuOpen(false);
+          break;
+        case "save-txt":
+          downloadFile(editor.value, getExportFileName("txt"), "text/plain;charset=utf-8");
+          setIoMenuOpen(false);
+          break;
+        case "save-html": {
+          const docTitle = getExportFileName("html").replace(/\.html$/i, "");
+          const htmlDoc = buildStandaloneHtmlDocument(preview.innerHTML, docTitle);
+          downloadFile(htmlDoc, getExportFileName("html"), "text/html;charset=utf-8");
+          setIoMenuOpen(false);
+          break;
+        }
+        case "print":
+          setIoMenuOpen(false);
+          window.print();
+          break;
+      }
+    }
+
+    document.querySelectorAll("[data-export]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.getAttribute("data-export");
+        handleExportAction(action, btn);
+      });
+    });
+
+    // Initial load from localStorage or blank starter
+    let savedContent = null;
+    let savedFilename = null;
+    let savedTheme = "light";
+    try {
+      savedContent = localStorage.getItem(STORAGE_KEY);
+      savedFilename = localStorage.getItem(STORAGE_FILENAME_KEY);
+      savedTheme = localStorage.getItem(STORAGE_THEME_KEY) || "light";
+    } catch {
+      // Ignore storage access errors
+    }
+
+    setPreviewTheme(savedTheme);
+    fileNameBadge.textContent = savedFilename || "untitled.md";
+    editor.value = savedContent !== null ? savedContent : DEFAULT_MARKDOWN;
+    renderMarkdown();
+  </script>
+</body>
+</html>
