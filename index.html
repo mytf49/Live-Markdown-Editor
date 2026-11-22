@@ -53,25 +53,6 @@
       --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
     }
 
-    :root[data-theme="light"] {
-      --bg: #f6f7fb;
-      --surface: #ffffff;
-      --surface-2: #f0f2f8;
-      --surface-3: #e7ebf5;
-      --surface-alt: #f0f2f8;
-      --text: #141824;
-      --text-muted: #5b647a;
-      --muted: #5b647a;
-      --border: #dfe4f0;
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
-      --accent-soft: rgba(79, 70, 229, 0.12);
-      --code-bg: #f0f2f8;
-      --blockquote-border: #c7d0e6;
-      --drop-bg: rgba(79, 70, 229, 0.08);
-      --shadow: 0 10px 30px rgba(20, 24, 36, 0.06);
-    }
-
     *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
@@ -753,11 +734,9 @@
     .markdown-body blockquote {
       padding: 8px 16px;
       color: var(--text-muted);
-      border-left: 4px solid var(--accent);
       background: var(--surface);
       border: 1px solid var(--border);
-      border-left-width: 4px;
-      border-left-color: var(--accent);
+      border-left: 4px solid var(--accent);
       border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
 
@@ -913,27 +892,27 @@
         <button id="modePreviewBtn" type="button">Preview</button>
       </div>
 
-      <button id="themeToggleBtn" type="button" title="Toggle Light / Dark theme">Dark Mode</button>
+      <button id="themeToggleBtn" type="button" title="Toggle Light / Dark theme">🌙 Dark Mode</button>
 
       <div class="menu-dropdown" id="ioMenuDropdown">
         <button id="ioMenuToggle" class="primary" type="button" aria-expanded="false" aria-controls="ioMenuPanel">
           Import / Export ▾
         </button>
-        <div class="menu-panel" id="ioMenuPanel" role="menu">
+        <div class="menu-panel" id="ioMenuPanel">
           <span class="menu-section-label">Import</span>
-          <label class="btn-label menu-item" for="fileInput" role="menuitem">
+          <label class="btn-label menu-item" for="fileInput">
             Import .md / .txt
           </label>
           <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown,text/plain" />
 
           <div class="menu-divider"></div>
           <span class="menu-section-label">Export</span>
-          <button class="menu-item" type="button" role="menuitem" data-export="copy-md">Copy Markdown</button>
-          <button class="menu-item" type="button" role="menuitem" data-export="copy-html">Copy HTML</button>
-          <button class="menu-item" type="button" role="menuitem" data-export="save-md">Save .md</button>
-          <button class="menu-item" type="button" role="menuitem" data-export="save-txt">Save .txt</button>
-          <button class="menu-item" type="button" role="menuitem" data-export="save-html">Save .html</button>
-          <button class="menu-item" type="button" role="menuitem" data-export="print">Print / PDF</button>
+          <button class="menu-item" type="button" data-export="copy-md">Copy Markdown</button>
+          <button class="menu-item" type="button" data-export="copy-html">Copy HTML</button>
+          <button class="menu-item" type="button" data-export="save-md">Save .md</button>
+          <button class="menu-item" type="button" data-export="save-txt">Save .txt</button>
+          <button class="menu-item" type="button" data-export="save-html">Save .html</button>
+          <button class="menu-item" type="button" data-export="print">Print / PDF</button>
         </div>
       </div>
     </div>
@@ -945,8 +924,8 @@
         <span>Markdown Source</span>
         <div class="format-mini-bar">
           <button type="button" id="newDocBtn" title="Reset Document">New</button>
-          <button type="button" id="undoBtn" title="Undo Snapshot (Ctrl/Cmd+Shift+Z)" disabled>Undo</button>
-          <button type="button" id="redoBtn" title="Redo Snapshot (Ctrl/Cmd+Y)" disabled>Redo</button>
+          <button type="button" id="undoBtn" title="Undo Snapshot (Ctrl/Cmd+Z)" disabled>Undo</button>
+          <button type="button" id="redoBtn" title="Redo Snapshot (Ctrl/Cmd+Shift+Z)" disabled>Redo</button>
           <button type="button" data-heading="#" title="Heading 1"><span class="fmt-h1">H1</span></button>
           <button type="button" data-heading="##" title="Heading 2 / Subheading"><span class="fmt-h2">H2</span></button>
           <button type="button" data-heading="###" title="Heading 3 / Subheading"><span class="fmt-h3">H3</span></button>
@@ -1068,6 +1047,63 @@ Start typing your Markdown here.
     let syncScrollEnabled = true;
     let scrollLockOwner = null;
     let scrollReleaseTimer = null;
+    let syncPauseTimer = null;
+
+    function pauseSyncScrollTemporarily(ms = 450) {
+      if (!syncScrollEnabled) return () => {};
+      const previous = syncScrollEnabled;
+      syncScrollEnabled = false;
+      clearTimeout(syncPauseTimer);
+      syncPauseTimer = setTimeout(() => {
+        syncScrollEnabled = previous;
+      }, ms);
+      return () => {
+        clearTimeout(syncPauseTimer);
+        syncScrollEnabled = previous;
+      };
+    }
+
+    // Replaces a text range in editor while preserving native undo where possible and keeping scroll steady
+    function replaceEditorRange(start, end, replacement, selectStart = null, selectEnd = null) {
+      const prevEditorScrollTop = editor.scrollTop;
+      const prevPreviewScrollTop = preview.scrollTop;
+
+      editor.focus();
+      editor.setSelectionRange(start, end);
+
+      let usedExecCommand = false;
+      if (typeof document.execCommand === "function") {
+        try {
+          usedExecCommand = document.execCommand("insertText", false, replacement);
+        } catch {
+          usedExecCommand = false;
+        }
+      }
+
+      if (!usedExecCommand) {
+        if (typeof editor.setRangeText === "function") {
+          editor.setRangeText(replacement, start, end, "preserve");
+        } else {
+          editor.value = editor.value.slice(0, start) + replacement + editor.value.slice(end);
+        }
+      }
+
+      const finalStart = typeof selectStart === "number" ? selectStart : start + replacement.length;
+      const finalEnd = typeof selectEnd === "number" ? selectEnd : finalStart;
+      editor.setSelectionRange(finalStart, finalEnd);
+
+      const resumeSync = pauseSyncScrollTemporarily(80);
+      editor.scrollTop = prevEditorScrollTop;
+      preview.scrollTop = prevPreviewScrollTop;
+      renderMarkdown({ preserveScroll: true });
+      editor.scrollTop = prevEditorScrollTop;
+      preview.scrollTop = prevPreviewScrollTop;
+      requestAnimationFrame(() => {
+        editor.scrollTop = prevEditorScrollTop;
+        preview.scrollTop = prevPreviewScrollTop;
+        resumeSync();
+      });
+    }
 
     // Split-Pane Resize Logic
     let splitPercent = 50;
@@ -1132,7 +1168,10 @@ Start typing your Markdown here.
         return;
       }
       editor.value = DEFAULT_MARKDOWN;
+      editor.scrollTop = 0;
+      preview.scrollTop = 0;
       fileNameBadge.textContent = "untitled.md";
+      saveToStorage();
       renderMarkdown();
     });
 
@@ -1179,12 +1218,27 @@ Start typing your Markdown here.
 
     function applySnapshot(snap) {
       if (!snap) return;
+      const prevEditorScrollTop = editor.scrollTop;
+      const prevPreviewScrollTop = preview.scrollTop;
+
       editor.value = snap.value;
       editor.focus();
       editor.selectionStart = snap.selectionStart;
       editor.selectionEnd = snap.selectionEnd;
+
+      const resumeSync = pauseSyncScrollTemporarily(80);
+      editor.scrollTop = prevEditorScrollTop;
+      preview.scrollTop = prevPreviewScrollTop;
+
       updateHistoryButtons();
       renderMarkdown({ preserveScroll: true, recordHistory: false });
+      editor.scrollTop = prevEditorScrollTop;
+      preview.scrollTop = prevPreviewScrollTop;
+      requestAnimationFrame(() => {
+        editor.scrollTop = prevEditorScrollTop;
+        preview.scrollTop = prevPreviewScrollTop;
+        resumeSync();
+      });
     }
 
     function undoSnapshot() {
@@ -1374,48 +1428,8 @@ Start typing your Markdown here.
       }
     }
 
-    function getTaskLineIndices(markdown) {
-      const indices = [];
-      const lines = markdown.split("\n");
-      let activeFence = null;
-      let activeFenceLen = 0;
-
-      lines.forEach((line, i) => {
-        const fenceMatch = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
-        if (fenceMatch) {
-          const marker = fenceMatch[1][0];
-          const len = fenceMatch[1].length;
-          const info = fenceMatch[2].trim();
-
-          if (!activeFence) {
-            activeFence = marker;
-            activeFenceLen = len;
-            return;
-          } else if (marker === activeFence && len >= activeFenceLen) {
-            if (!info) {
-              activeFence = null;
-              activeFenceLen = 0;
-            } else {
-              activeFence = marker;
-              activeFenceLen = len;
-            }
-            return;
-          }
-        }
-
-        if (activeFence) return;
-
-        if (/^\s*(?:[-*+]|\d+\.)\s+\[[ xX]\]\s+/.test(line)) {
-          indices.push(i);
-        }
-      });
-
-      return indices;
-    }
-
-    // Heading Outline & Jump (fence-marker aware)
-    function extractHeadings(markdown) {
-      const headings = [];
+    // Shared helper to scan lines while tracking fenced code blocks
+    function scanNonFencedLines(markdown, visitor) {
       const lines = markdown.split("\n");
       let activeFence = null;
       let activeFenceLen = 0;
@@ -1425,35 +1439,61 @@ Start typing your Markdown here.
         if (fenceMatch) {
           const marker = fenceMatch[1][0];
           const len = fenceMatch[1].length;
-          const info = fenceMatch[2].trim();
+          const trailing = fenceMatch[2].trim();
 
           if (!activeFence) {
             activeFence = marker;
             activeFenceLen = len;
             return;
-          } else if (marker === activeFence && len >= activeFenceLen) {
-            if (!info) {
-              activeFence = null;
-              activeFenceLen = 0;
-            } else {
-              activeFence = marker;
-              activeFenceLen = len;
-            }
+          }
+          if (marker === activeFence && len >= activeFenceLen && trailing === "") {
+            activeFence = null;
+            activeFenceLen = 0;
             return;
           }
         }
-        if (activeFence) return;
 
+        if (activeFence) return;
+        visitor(line, lineIndex);
+      });
+    }
+
+    function getTaskLineIndices(markdown) {
+      const indices = [];
+      scanNonFencedLines(markdown, (line, lineIndex) => {
+        if (/^\s*(?:[-*+]|\d+\.)\s+\[[ xX]\]\s+/.test(line)) {
+          indices.push(lineIndex);
+        }
+      });
+      return indices;
+    }
+
+    function stripInlineMarkdown(text) {
+      return text
+        .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+        .replace(/`([^`\n]+)`/g, "$1")
+        .replace(/\*\*\*([^*\n]+)\*\*\*/g, "$1")
+        .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+        .replace(/\*([^*\n]+)\*/g, "$1")
+        .replace(/~~([^~\n]+)~~/g, "$1")
+        .trim();
+    }
+
+    // Heading Outline & Jump
+    function extractHeadings(markdown) {
+      const headings = [];
+      scanNonFencedLines(markdown, (line, lineIndex) => {
         const match = line.match(/^(#{1,3})\s+(.+?)\s*#*$/);
         if (match) {
+          const rawText = match[2].trim();
           headings.push({
             level: match[1].length,
-            text: match[2].trim(),
+            text: stripInlineMarkdown(rawText) || rawText,
             lineIndex
           });
         }
       });
-
       return headings;
     }
 
@@ -1464,6 +1504,7 @@ Start typing your Markdown here.
         charPos += lines[i].length + 1;
       }
 
+      const resumeSync = pauseSyncScrollTemporarily(600);
       editor.focus();
       editor.setSelectionRange(charPos, charPos + (lines[heading.lineIndex]?.length || 0));
       updateCursorPosition();
@@ -1478,11 +1519,12 @@ Start typing your Markdown here.
       if (targetEl) {
         targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
       }
+      requestAnimationFrame(() => resumeSync());
     }
 
     function renderOutline(markdown) {
       const headings = extractHeadings(markdown);
-      outlineBar.innerHTML = "";
+      outlineBar.replaceChildren();
 
       if (!headings.length) {
         const empty = document.createElement("span");
@@ -1574,7 +1616,7 @@ Start typing your Markdown here.
         addCopyCodeButtons();
 
         // Enable task checkboxes in preview and sync back to Markdown source
-        const checkboxes = preview.querySelectorAll('input[type="checkbox"]');
+        const checkboxes = preview.querySelectorAll('li.task-list-item input[type="checkbox"]');
         const taskLines = getTaskLineIndices(raw);
 
         checkboxes.forEach((cb, idx) => {
@@ -1585,13 +1627,19 @@ Start typing your Markdown here.
             const lineIdx = taskLines[taskIdx];
             if (lineIdx === undefined) return;
 
+            const prevEditorScrollTop = editor.scrollTop;
+            const prevPreviewScrollTop = preview.scrollTop;
             const lines = editor.value.split("\n");
             lines[lineIdx] = lines[lineIdx].replace(
               /(\s*(?:[-*+]|\d+\.)\s*\[)[ xX](\])/,
               `$1${cb.checked ? "x" : " "}$2`
             );
+            const resumeSync = pauseSyncScrollTemporarily(80);
             editor.value = lines.join("\n");
             renderMarkdown({ preserveScroll: true });
+            editor.scrollTop = prevEditorScrollTop;
+            preview.scrollTop = prevPreviewScrollTop;
+            resumeSync();
           });
         });
 
@@ -1613,6 +1661,7 @@ Start typing your Markdown here.
         return;
       }
       const [start, end] = matchPositions[currentMatchIdx];
+      const resumeSync = pauseSyncScrollTemporarily(150);
       editor.focus();
       editor.setSelectionRange(start, end);
       updateCursorPosition();
@@ -1621,6 +1670,7 @@ Start typing your Markdown here.
       const totalLines = Math.max(1, editor.value.split("\n").length - 1);
       editor.scrollTop = (lineNum / totalLines) * Math.max(0, editor.scrollHeight - editor.clientHeight);
       findCount.textContent = `${currentMatchIdx + 1} of ${matchPositions.length}`;
+      requestAnimationFrame(() => resumeSync());
     }
 
     function findInEditor(query, { keepIndex = false, selectMatch = true } = {}) {
@@ -1666,9 +1716,14 @@ Start typing your Markdown here.
 
       const [start, end] = matchPositions[currentMatchIdx];
       const replacement = replaceInput.value;
-      editor.value = editor.value.slice(0, start) + replacement + editor.value.slice(end);
-      renderMarkdown({ preserveScroll: true });
-      findInEditor(query, { keepIndex: true, selectMatch: true });
+      replaceEditorRange(
+        start,
+        end,
+        replacement,
+        start + replacement.length,
+        start + replacement.length
+      );
+      findInEditor(query, { keepIndex: true, selectMatch: false });
     }
 
     function replaceAll() {
@@ -1678,15 +1733,23 @@ Start typing your Markdown here.
       if (!matchPositions.length) return;
 
       const replacement = replaceInput.value;
+      const prevEditorScrollTop = editor.scrollTop;
+      const prevPreviewScrollTop = preview.scrollTop;
       let updated = editor.value;
       for (let i = matchPositions.length - 1; i >= 0; i--) {
         const [start, end] = matchPositions[i];
         updated = updated.slice(0, start) + replacement + updated.slice(end);
       }
+      const resumeSync = pauseSyncScrollTemporarily(80);
       editor.value = updated;
+      editor.scrollTop = prevEditorScrollTop;
+      preview.scrollTop = prevPreviewScrollTop;
       currentMatchIdx = -1;
       renderMarkdown({ preserveScroll: true });
+      editor.scrollTop = prevEditorScrollTop;
+      preview.scrollTop = prevPreviewScrollTop;
       findInEditor(query, { selectMatch: false });
+      resumeSync();
     }
 
     function openFindBar(focusInput = true) {
@@ -1737,7 +1800,7 @@ Start typing your Markdown here.
     replaceOneBtn.addEventListener("click", replaceNext);
     replaceAllBtn.addEventListener("click", replaceAll);
 
-    // Formatting & Insert Helpers
+    // Formatting & Insert Helpers (scroll-safe)
     function insertHeading(hashes) {
       const start = editor.selectionStart;
       const val = editor.value;
@@ -1750,14 +1813,8 @@ Start typing your Markdown here.
       const placeholder = stripped || "Heading";
       const updatedLine = `${hashes} ${placeholder}`;
 
-      editor.value = val.slice(0, lineStart) + updatedLine + val.slice(lineEnd);
-      editor.focus();
-
       const textStart = lineStart + hashes.length + 1;
-      editor.selectionStart = textStart;
-      editor.selectionEnd = textStart + placeholder.length;
-
-      renderMarkdown({ preserveScroll: true });
+      replaceEditorRange(lineStart, lineEnd, updatedLine, textStart, textStart + placeholder.length);
     }
 
     function prefixCurrentLine(prefix) {
@@ -1771,14 +1828,8 @@ Start typing your Markdown here.
       const content = currentLine.trim() ? currentLine : "item";
       const updatedLine = `${prefix}${content}`;
 
-      editor.value = val.slice(0, lineStart) + updatedLine + val.slice(lineEnd);
-      editor.focus();
-
       const textStart = lineStart + prefix.length;
-      editor.selectionStart = textStart;
-      editor.selectionEnd = textStart + content.length;
-
-      renderMarkdown({ preserveScroll: true });
+      replaceEditorRange(lineStart, lineEnd, updatedLine, textStart, textStart + content.length);
     }
 
     function insertLink() {
@@ -1787,14 +1838,9 @@ Start typing your Markdown here.
       const val = editor.value;
       const selected = val.slice(start, end) || "link text";
       const snippet = `[${selected}](https://example.com)`;
-
-      editor.value = val.slice(0, start) + snippet + val.slice(end);
-      editor.focus();
       const urlStart = start + selected.length + 3;
-      editor.selectionStart = urlStart;
-      editor.selectionEnd = urlStart + "https://example.com".length;
 
-      renderMarkdown({ preserveScroll: true });
+      replaceEditorRange(start, end, snippet, urlStart, urlStart + "https://example.com".length);
     }
 
     function insertImage() {
@@ -1803,14 +1849,9 @@ Start typing your Markdown here.
       const val = editor.value;
       const selected = val.slice(start, end) || "alt text";
       const snippet = `![${selected}](https://example.com/image.png)`;
-
-      editor.value = val.slice(0, start) + snippet + val.slice(end);
-      editor.focus();
       const urlStart = start + selected.length + 4;
-      editor.selectionStart = urlStart;
-      editor.selectionEnd = urlStart + "https://example.com/image.png".length;
 
-      renderMarkdown({ preserveScroll: true });
+      replaceEditorRange(start, end, snippet, urlStart, urlStart + "https://example.com/image.png".length);
     }
 
     function insertTable(rows = 2, cols = 2) {
@@ -1830,17 +1871,10 @@ Start typing your Markdown here.
         ? `${headerLine}\n${dividerLine}\n${bodyLines.join("\n")}\n`
         : `${headerLine}\n${dividerLine}\n`;
 
+      setTablePickerOpen(false);
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
-      const val = editor.value;
-
-      editor.value = val.slice(0, start) + snippet + val.slice(end);
-      editor.focus();
-      editor.selectionStart = start + 2;
-      editor.selectionEnd = start + 2 + headers[0].length;
-
-      setTablePickerOpen(false);
-      renderMarkdown({ preserveScroll: true });
+      replaceEditorRange(start, end, snippet, start + 2, start + 2 + headers[0].length);
     }
 
     function submitTablePicker() {
@@ -1867,14 +1901,9 @@ Start typing your Markdown here.
       const val = editor.value;
       const selected = val.slice(start, end) || "// code here";
       const snippet = `\`\`\`js\n${selected}\n\`\`\``;
-
-      editor.value = val.slice(0, start) + snippet + val.slice(end);
-      editor.focus();
       const codeStart = start + 6;
-      editor.selectionStart = codeStart;
-      editor.selectionEnd = codeStart + selected.length;
 
-      renderMarkdown({ preserveScroll: true });
+      replaceEditorRange(start, end, snippet, codeStart, codeStart + selected.length);
     }
 
     function wrapSelection(prefix, suffix = prefix) {
@@ -1885,16 +1914,16 @@ Start typing your Markdown here.
       const placeholder = selected || "text";
       const replacement = `${prefix}${placeholder}${suffix}`;
 
-      editor.value = value.slice(0, start) + replacement + value.slice(end);
-      editor.focus();
-
-      editor.selectionStart = start + prefix.length;
-      editor.selectionEnd = start + prefix.length + placeholder.length;
-
-      renderMarkdown({ preserveScroll: true });
+      replaceEditorRange(
+        start,
+        end,
+        replacement,
+        start + prefix.length,
+        start + prefix.length + placeholder.length
+      );
     }
 
-    // Smart List Continuation on Enter
+    // Smart List Continuation on Enter (bullet, task, and numbered lists)
     function handleListEnter(e) {
       if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false;
 
@@ -1912,9 +1941,8 @@ Start typing your Markdown here.
       if (taskEmptyMatch) {
         e.preventDefault();
         const cleanedLine = `${taskEmptyMatch[1]}`;
-        editor.value = val.slice(0, lineStart) + cleanedLine + val.slice(lineEnd);
-        editor.selectionStart = editor.selectionEnd = lineStart + cleanedLine.length;
-        renderMarkdown({ preserveScroll: true });
+        const pos = lineStart + cleanedLine.length;
+        replaceEditorRange(lineStart, lineEnd, cleanedLine, pos, pos);
         return true;
       }
 
@@ -1922,9 +1950,27 @@ Start typing your Markdown here.
       if (taskMatch) {
         e.preventDefault();
         const nextPrefix = `\n${taskMatch[1]}${taskMatch[2]} [ ] `;
-        editor.value = val.slice(0, start) + nextPrefix + val.slice(end);
-        editor.selectionStart = editor.selectionEnd = start + nextPrefix.length;
-        renderMarkdown({ preserveScroll: true });
+        const pos = start + nextPrefix.length;
+        replaceEditorRange(start, end, nextPrefix, pos, pos);
+        return true;
+      }
+
+      const orderedEmptyMatch = currentLine.match(/^(\s*)(\d+)\.\s*$/);
+      if (orderedEmptyMatch) {
+        e.preventDefault();
+        const cleanedLine = `${orderedEmptyMatch[1]}`;
+        const pos = lineStart + cleanedLine.length;
+        replaceEditorRange(lineStart, lineEnd, cleanedLine, pos, pos);
+        return true;
+      }
+
+      const orderedMatch = currentLine.match(/^(\s*)(\d+)\.\s+(.*)$/);
+      if (orderedMatch) {
+        e.preventDefault();
+        const nextNum = Number(orderedMatch[2]) + 1;
+        const nextPrefix = `\n${orderedMatch[1]}${nextNum}. `;
+        const pos = start + nextPrefix.length;
+        replaceEditorRange(start, end, nextPrefix, pos, pos);
         return true;
       }
 
@@ -1932,9 +1978,8 @@ Start typing your Markdown here.
       if (bulletEmptyMatch) {
         e.preventDefault();
         const cleanedLine = `${bulletEmptyMatch[1]}`;
-        editor.value = val.slice(0, lineStart) + cleanedLine + val.slice(lineEnd);
-        editor.selectionStart = editor.selectionEnd = lineStart + cleanedLine.length;
-        renderMarkdown({ preserveScroll: true });
+        const pos = lineStart + cleanedLine.length;
+        replaceEditorRange(lineStart, lineEnd, cleanedLine, pos, pos);
         return true;
       }
 
@@ -1942,9 +1987,8 @@ Start typing your Markdown here.
       if (bulletMatch) {
         e.preventDefault();
         const nextPrefix = `\n${bulletMatch[1]}${bulletMatch[2]} `;
-        editor.value = val.slice(0, start) + nextPrefix + val.slice(end);
-        editor.selectionStart = editor.selectionEnd = start + nextPrefix.length;
-        renderMarkdown({ preserveScroll: true });
+        const pos = start + nextPrefix.length;
+        replaceEditorRange(start, end, nextPrefix, pos, pos);
         return true;
       }
 
@@ -1994,7 +2038,7 @@ Start typing your Markdown here.
         wrapSelection("*");
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z" && historyIndex > 0) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey && historyIndex > 0) {
         const beforeVal = editor.value;
         requestAnimationFrame(() => {
           if (editor.value === beforeVal && historyIndex > 0) {
@@ -2003,14 +2047,9 @@ Start typing your Markdown here.
         });
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
+      if ((e.metaKey || e.ctrlKey) && ((e.key.toLowerCase() === "z" && e.shiftKey) || e.key.toLowerCase() === "y")) {
         e.preventDefault();
         redoSnapshot();
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        undoSnapshot();
         return;
       }
 
@@ -2026,16 +2065,18 @@ Start typing your Markdown here.
           const lineStart = val.lastIndexOf("\n", start - 1) + 1;
           const linePrefix = val.slice(lineStart, lineStart + 2);
           if (linePrefix === "  ") {
-            editor.value = val.slice(0, lineStart) + val.slice(lineStart + 2);
-            editor.selectionStart = Math.max(lineStart, start - 2);
-            editor.selectionEnd = Math.max(lineStart, end - 2);
-            renderMarkdown({ preserveScroll: true });
+            replaceEditorRange(
+              lineStart,
+              lineStart + 2,
+              "",
+              Math.max(lineStart, start - 2),
+              Math.max(lineStart, end - 2)
+            );
           }
-        } else {
-          editor.value = val.slice(0, start) + "  " + val.slice(end);
-          editor.selectionStart = editor.selectionEnd = start + 2;
-          renderMarkdown({ preserveScroll: true });
+          return;
         }
+
+        replaceEditorRange(start, end, "  ", start + 2, start + 2);
       }
     });
 
@@ -2107,6 +2148,8 @@ Start typing your Markdown here.
       const reader = new FileReader();
       reader.onload = (e) => {
         editor.value = String(e.target?.result ?? "");
+        editor.scrollTop = 0;
+        preview.scrollTop = 0;
         fileNameBadge.textContent = file.name;
         renderMarkdown();
       };
@@ -2122,8 +2165,13 @@ Start typing your Markdown here.
       setIoMenuOpen(false);
     });
 
-    // Drag and drop support
+    // Drag and drop support (files only)
     let dragCounter = 0;
+
+    function isFileDrag(e) {
+      const types = e.dataTransfer?.types;
+      return Boolean(types && Array.from(types).includes("Files"));
+    }
 
     function resetDragState() {
       dragCounter = 0;
@@ -2131,23 +2179,30 @@ Start typing your Markdown here.
     }
 
     window.addEventListener("dragenter", (e) => {
+      if (!isFileDrag(e)) return;
       e.preventDefault();
       dragCounter++;
       document.body.classList.add("dragging");
     });
 
     window.addEventListener("dragover", (e) => {
+      if (!isFileDrag(e)) return;
       e.preventDefault();
     });
 
-    window.addEventListener("dragleave", () => {
-      dragCounter--;
+    window.addEventListener("dragleave", (e) => {
+      if (!isFileDrag(e) && dragCounter === 0) return;
+      dragCounter = Math.max(0, dragCounter - 1);
       if (dragCounter <= 0) {
         resetDragState();
       }
     });
 
     window.addEventListener("drop", (e) => {
+      if (!isFileDrag(e) && !e.dataTransfer?.files?.length) {
+        resetDragState();
+        return;
+      }
       e.preventDefault();
       const file = e.dataTransfer?.files?.[0];
       resetDragState();
@@ -2178,6 +2233,12 @@ Start typing your Markdown here.
       return `${base}.${extension}`;
     }
 
+    function getCleanPreviewHtml() {
+      const clone = preview.cloneNode(true);
+      clone.querySelectorAll(".copy-code-btn").forEach((btn) => btn.remove());
+      return clone.innerHTML;
+    }
+
     function downloadFile(content, filename, mimeType) {
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
@@ -2185,7 +2246,7 @@ Start typing your Markdown here.
       a.href = url;
       a.download = filename;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     }
 
     function buildStandaloneHtmlDocument(bodyHtml, title) {
@@ -2269,7 +2330,7 @@ ${bodyHtml}
           await copyToClipboard(editor.value, btn);
           break;
         case "copy-html":
-          await copyToClipboard(preview.innerHTML, btn);
+          await copyToClipboard(getCleanPreviewHtml(), btn);
           break;
         case "save-md":
           downloadFile(editor.value, getExportFileName("md"), "text/markdown;charset=utf-8");
@@ -2281,7 +2342,7 @@ ${bodyHtml}
           break;
         case "save-html": {
           const docTitle = getExportFileName("html").replace(/\.html$/i, "");
-          const htmlDoc = buildStandaloneHtmlDocument(preview.innerHTML, docTitle);
+          const htmlDoc = buildStandaloneHtmlDocument(getCleanPreviewHtml(), docTitle);
           downloadFile(htmlDoc, getExportFileName("html"), "text/html;charset=utf-8");
           setIoMenuOpen(false);
           break;
