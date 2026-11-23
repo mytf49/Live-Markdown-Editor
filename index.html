@@ -21,11 +21,9 @@
       --accent-hover: #4338ca;
       --accent-soft: rgba(79, 70, 229, 0.12);
       --success: #059669;
-      --success-soft: rgba(5, 150, 105, 0.12);
       --danger: #dc2626;
       --danger-soft: rgba(220, 38, 38, 0.12);
       --warning: #d97706;
-      --warning-soft: rgba(217, 119, 6, 0.12);
       --drop-bg: rgba(79, 70, 229, 0.08);
       --shadow: 0 10px 30px rgba(20, 24, 36, 0.06);
       --radius: 14px;
@@ -47,11 +45,9 @@
       --accent-hover: #818cf8;
       --accent-soft: rgba(99, 102, 241, 0.18);
       --success: #10b981;
-      --success-soft: rgba(16, 185, 129, 0.16);
       --danger: #f87171;
       --danger-soft: rgba(248, 113, 113, 0.16);
       --warning: #fbbf24;
-      --warning-soft: rgba(251, 191, 36, 0.16);
       --drop-bg: rgba(99, 102, 241, 0.14);
       --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
     }
@@ -88,7 +84,7 @@
       text-decoration: underline;
     }
 
-    button, input, select, textarea {
+    button, input, textarea {
       font-family: inherit;
       color: inherit;
     }
@@ -133,27 +129,10 @@
       border-color: var(--accent-hover);
     }
 
-    button.success {
-      background: var(--success);
-      border-color: var(--success);
-      color: #ffffff;
-    }
-
     button.danger {
       background: var(--danger);
       border-color: var(--danger);
       color: #ffffff;
-    }
-
-    button.danger-ghost {
-      color: var(--danger);
-      border-color: transparent;
-      background: transparent;
-    }
-
-    button.danger-ghost:hover:not(:disabled) {
-      background: var(--danger-soft);
-      border-color: transparent;
     }
 
     button.sm {
@@ -167,8 +146,7 @@
     }
 
     input[type="text"],
-    input[type="number"],
-    select {
+    input[type="number"] {
       background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
@@ -178,14 +156,13 @@
       transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
     }
 
-    input.compact,
-    select.compact {
+    input.compact {
       padding: 6px 9px;
       font-size: 0.8rem;
       border-radius: 7px;
     }
 
-    input:focus, select:focus {
+    input:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-soft);
       background: var(--surface);
@@ -263,18 +240,6 @@
       border: 1px solid var(--border);
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
-    }
-
-    .badge.accent {
-      background: var(--accent-soft);
-      color: var(--accent);
-      border-color: transparent;
-    }
-
-    .badge.success {
-      background: var(--success-soft);
-      color: var(--success);
-      border-color: transparent;
     }
 
     .file-badge {
@@ -358,7 +323,7 @@
       color: #ffffff;
     }
 
-    /* Main Container & Card Workspace (No left/right padding) */
+    /* Main Container & Card Workspace */
     .container {
       flex: 1;
       width: 100%;
@@ -422,7 +387,7 @@
       height: 64px;
     }
 
-    /* Card (Reference Style) */
+    /* Card */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -641,7 +606,7 @@
       display: flex;
     }
 
-    /* Modals (Reference Style) */
+    /* Modals */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -766,7 +731,7 @@
       padding-top: 4px;
     }
 
-    /* Toast Notifications (Reference Style) */
+    /* Toast Notifications */
     .toast-container {
       position: fixed;
       bottom: 18px;
@@ -1247,6 +1212,7 @@ Start typing your Markdown here.
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     const hljsTheme = document.getElementById("hljsTheme");
     const newDocBtn = document.getElementById("newDocBtn");
+    const openDataModalBtn = document.getElementById("openDataModalBtn");
 
     const tablePickerBtn = document.getElementById("tablePickerBtn");
     const tablePicker = document.getElementById("tablePicker");
@@ -1272,6 +1238,8 @@ Start typing your Markdown here.
     const outlineBar = document.getElementById("outlineBar");
 
     let pendingConfirmResolver = null;
+    let lastModalTrigger = null;
+    let renderDebounceTimer = null;
 
     const toastContainer = document.getElementById("toast-container");
     function showToast(message, type = "info", duration = 3000) {
@@ -1287,8 +1255,17 @@ Start typing your Markdown here.
       }, duration);
     }
 
-    function requestConfirmation({ title, message, confirmLabel = "Confirm", danger = true }) {
+    function restoreModalFocus() {
+      const trigger = lastModalTrigger;
+      lastModalTrigger = null;
+      if (trigger && typeof trigger.focus === "function" && document.contains(trigger)) {
+        trigger.focus();
+      }
+    }
+
+    function requestConfirmation({ title, message, confirmLabel = "Confirm", danger = true, trigger = null }) {
       return new Promise((resolve) => {
+        lastModalTrigger = trigger || document.activeElement;
         pendingConfirmResolver = resolve;
         document.getElementById("confirm-title").textContent = title;
         document.getElementById("confirm-message").textContent = message;
@@ -1296,11 +1273,13 @@ Start typing your Markdown here.
         okBtn.textContent = confirmLabel;
         okBtn.className = danger ? "sm danger" : "sm primary";
         document.getElementById("confirm-modal").classList.remove("hidden");
+        okBtn.focus();
       });
     }
 
     function closeConfirmModal(confirmed) {
       document.getElementById("confirm-modal").classList.add("hidden");
+      restoreModalFocus();
       if (pendingConfirmResolver) {
         const resolve = pendingConfirmResolver;
         pendingConfirmResolver = null;
@@ -1309,6 +1288,7 @@ Start typing your Markdown here.
     }
 
     function openDataModal() {
+      lastModalTrigger = openDataModalBtn || document.activeElement;
       document.getElementById("data-modal").classList.remove("hidden");
     }
 
@@ -1316,6 +1296,7 @@ Start typing your Markdown here.
       document.getElementById("data-modal").classList.add("hidden");
       const dz = document.getElementById("drop-zone");
       if (dz) dz.classList.remove("dragover");
+      restoreModalFocus();
     }
 
     function handleBackdropClick(event, modalId) {
@@ -1354,44 +1335,50 @@ Start typing your Markdown here.
       };
     }
 
-    function replaceEditorRange(start, end, replacement, selectStart = null, selectEnd = null) {
+    function withPreservedScroll(fn, pauseMs = 80) {
       const prevEditorScrollTop = editor.scrollTop;
       const prevPreviewScrollTop = preview.scrollTop;
+      const resumeSync = pauseSyncScrollTemporarily(pauseMs);
 
-      editor.focus();
-      editor.setSelectionRange(start, end);
+      fn();
 
-      let usedExecCommand = false;
-      if (typeof document.execCommand === "function") {
-        try {
-          usedExecCommand = document.execCommand("insertText", false, replacement);
-        } catch {
-          usedExecCommand = false;
-        }
-      }
-
-      if (!usedExecCommand) {
-        if (typeof editor.setRangeText === "function") {
-          editor.setRangeText(replacement, start, end, "preserve");
-        } else {
-          editor.value = editor.value.slice(0, start) + replacement + editor.value.slice(end);
-        }
-      }
-
-      const finalStart = typeof selectStart === "number" ? selectStart : start + replacement.length;
-      const finalEnd = typeof selectEnd === "number" ? selectEnd : finalStart;
-      editor.setSelectionRange(finalStart, finalEnd);
-
-      const resumeSync = pauseSyncScrollTemporarily(80);
-      editor.scrollTop = prevEditorScrollTop;
-      preview.scrollTop = prevPreviewScrollTop;
-      renderMarkdown({ preserveScroll: true });
       editor.scrollTop = prevEditorScrollTop;
       preview.scrollTop = prevPreviewScrollTop;
       requestAnimationFrame(() => {
         editor.scrollTop = prevEditorScrollTop;
         preview.scrollTop = prevPreviewScrollTop;
         resumeSync();
+      });
+    }
+
+    function getLineBounds(text, pos) {
+      const safePos = Math.max(0, Math.min(text.length, pos ?? 0));
+      const lineStart = text.lastIndexOf("\n", safePos - 1) + 1;
+      const lineEndIdx = text.indexOf("\n", safePos);
+      const lineEnd = lineEndIdx === -1 ? text.length : lineEndIdx;
+      return { lineStart, lineEnd, currentLine: text.slice(lineStart, lineEnd) };
+    }
+
+    function getProportionalScrollTop(el, index, totalItems) {
+      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+      if (maxScroll <= 0 || totalItems <= 1) return 0;
+      const ratio = Math.min(1, Math.max(0, index / (totalItems - 1)));
+      return ratio * maxScroll;
+    }
+
+    function replaceEditorRange(start, end, replacement, selectStart = null, selectEnd = null) {
+      withPreservedScroll(() => {
+        editor.focus();
+        if (typeof editor.setRangeText === "function") {
+          editor.setRangeText(replacement, start, end, "preserve");
+        } else {
+          editor.value = editor.value.slice(0, start) + replacement + editor.value.slice(end);
+        }
+
+        const finalStart = typeof selectStart === "number" ? selectStart : start + replacement.length;
+        const finalEnd = typeof selectEnd === "number" ? selectEnd : finalStart;
+        editor.setSelectionRange(finalStart, finalEnd);
+        renderMarkdown({ preserveScroll: true });
       });
     }
 
@@ -1451,17 +1438,19 @@ Start typing your Markdown here.
       }
     });
 
-    // Reset / New Document (Reference Confirmation Modal)
+    // Reset / New Document
     newDocBtn.addEventListener("click", async () => {
       if (editor.value.trim()) {
         const confirmed = await requestConfirmation({
           title: "Start New Document",
           message: "Start a new document and replace your current notes?",
           confirmLabel: "New Document",
-          danger: true
+          danger: true,
+          trigger: newDocBtn
         });
         if (!confirmed) return;
       }
+      clearTimeout(renderDebounceTimer);
       editor.value = DEFAULT_MARKDOWN;
       editor.scrollTop = 0;
       preview.scrollTop = 0;
@@ -1514,26 +1503,13 @@ Start typing your Markdown here.
 
     function applySnapshot(snap) {
       if (!snap) return;
-      const prevEditorScrollTop = editor.scrollTop;
-      const prevPreviewScrollTop = preview.scrollTop;
-
-      editor.value = snap.value;
-      editor.focus();
-      editor.selectionStart = snap.selectionStart;
-      editor.selectionEnd = snap.selectionEnd;
-
-      const resumeSync = pauseSyncScrollTemporarily(80);
-      editor.scrollTop = prevEditorScrollTop;
-      preview.scrollTop = prevPreviewScrollTop;
-
-      updateHistoryButtons();
-      renderMarkdown({ preserveScroll: true, recordHistory: false });
-      editor.scrollTop = prevEditorScrollTop;
-      preview.scrollTop = prevPreviewScrollTop;
-      requestAnimationFrame(() => {
-        editor.scrollTop = prevEditorScrollTop;
-        preview.scrollTop = prevPreviewScrollTop;
-        resumeSync();
+      withPreservedScroll(() => {
+        editor.value = snap.value;
+        editor.focus();
+        editor.selectionStart = snap.selectionStart;
+        editor.selectionEnd = snap.selectionEnd;
+        updateHistoryButtons();
+        renderMarkdown({ preserveScroll: true, recordHistory: false });
       });
     }
 
@@ -1552,7 +1528,7 @@ Start typing your Markdown here.
     undoBtn.addEventListener("click", undoSnapshot);
     redoBtn.addEventListener("click", redoSnapshot);
 
-    // Light / Dark Mode Switch (no layout shift)
+    // Light / Dark Mode Switch
     function setPreviewTheme(theme) {
       const mode = theme === "dark" ? "dark" : "light";
       document.documentElement.setAttribute("data-theme", mode);
@@ -1562,9 +1538,12 @@ Start typing your Markdown here.
         // Ignore storage errors
       }
       if (hljsTheme) {
-        hljsTheme.href = mode === "dark"
+        const nextHref = mode === "dark"
           ? "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css"
           : "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css";
+        if (hljsTheme.getAttribute("href") !== nextHref) {
+          hljsTheme.href = nextHref;
+        }
       }
     }
 
@@ -1786,11 +1765,9 @@ Start typing your Markdown here.
       editor.focus();
       editor.setSelectionRange(charPos, charPos + (lines[heading.lineIndex]?.length || 0));
       updateCursorPosition();
-      const lineRatio = lines.length > 1 ? heading.lineIndex / (lines.length - 1) : 0;
-      editor.scrollTop = lineRatio * Math.max(0, editor.scrollHeight - editor.clientHeight);
+      editor.scrollTop = getProportionalScrollTop(editor, heading.lineIndex, lines.length);
 
-      const selector = `h${heading.level}`;
-      const candidates = Array.from(preview.querySelectorAll(selector)).filter(
+      const candidates = Array.from(preview.querySelectorAll(`h${heading.level}`)).filter(
         (el) => (el.textContent || "").trim() === heading.text
       );
       const targetEl = candidates[occurrenceIndex] || candidates[0];
@@ -1903,19 +1880,15 @@ Start typing your Markdown here.
             const lineIdx = taskLines[taskIdx];
             if (lineIdx === undefined) return;
 
-            const prevEditorScrollTop = editor.scrollTop;
-            const prevPreviewScrollTop = preview.scrollTop;
-            const lines = editor.value.split("\n");
-            lines[lineIdx] = lines[lineIdx].replace(
-              /(\s*(?:[-*+]|\d+\.)\s*\[)[ xX](\])/,
-              `$1${cb.checked ? "x" : " "}$2`
-            );
-            const resumeSync = pauseSyncScrollTemporarily(80);
-            editor.value = lines.join("\n");
-            renderMarkdown({ preserveScroll: true });
-            editor.scrollTop = prevEditorScrollTop;
-            preview.scrollTop = prevPreviewScrollTop;
-            resumeSync();
+            withPreservedScroll(() => {
+              const lines = editor.value.split("\n");
+              lines[lineIdx] = lines[lineIdx].replace(
+                /(\s*(?:[-*+]|\d+\.)\s*\[)[ xX](\])/,
+                `$1${cb.checked ? "x" : " "}$2`
+              );
+              editor.value = lines.join("\n");
+              renderMarkdown({ preserveScroll: true });
+            });
           });
         });
 
@@ -1925,6 +1898,16 @@ Start typing your Markdown here.
       } catch (err) {
         preview.innerHTML = `<div class="fallback-banner">Preview error: ${escapeHtml(String(err?.message || err))}</div>`;
       }
+    }
+
+    function scheduleMarkdownRender(delay = 40) {
+      updateStats(editor.value);
+      updateCursorPosition();
+      saveToStorage();
+      clearTimeout(renderDebounceTimer);
+      renderDebounceTimer = setTimeout(() => {
+        renderMarkdown({ preserveScroll: true });
+      }, delay);
     }
 
     // Find & Replace
@@ -1943,8 +1926,8 @@ Start typing your Markdown here.
       updateCursorPosition();
       const beforeText = editor.value.slice(0, start);
       const lineNum = beforeText.split("\n").length - 1;
-      const totalLines = Math.max(1, editor.value.split("\n").length - 1);
-      editor.scrollTop = (lineNum / totalLines) * Math.max(0, editor.scrollHeight - editor.clientHeight);
+      const totalLines = editor.value.split("\n").length;
+      editor.scrollTop = getProportionalScrollTop(editor, lineNum, totalLines);
       findCount.textContent = `${currentMatchIdx + 1} of ${matchPositions.length}`;
       requestAnimationFrame(() => resumeSync());
     }
@@ -2009,23 +1992,17 @@ Start typing your Markdown here.
       if (!matchPositions.length) return;
 
       const replacement = replaceInput.value;
-      const prevEditorScrollTop = editor.scrollTop;
-      const prevPreviewScrollTop = preview.scrollTop;
-      let updated = editor.value;
-      for (let i = matchPositions.length - 1; i >= 0; i--) {
-        const [start, end] = matchPositions[i];
-        updated = updated.slice(0, start) + replacement + updated.slice(end);
-      }
-      const resumeSync = pauseSyncScrollTemporarily(80);
-      editor.value = updated;
-      editor.scrollTop = prevEditorScrollTop;
-      preview.scrollTop = prevPreviewScrollTop;
-      currentMatchIdx = -1;
-      renderMarkdown({ preserveScroll: true });
-      editor.scrollTop = prevEditorScrollTop;
-      preview.scrollTop = prevPreviewScrollTop;
-      findInEditor(query, { selectMatch: false });
-      resumeSync();
+      withPreservedScroll(() => {
+        let updated = editor.value;
+        for (let i = matchPositions.length - 1; i >= 0; i--) {
+          const [start, end] = matchPositions[i];
+          updated = updated.slice(0, start) + replacement + updated.slice(end);
+        }
+        editor.value = updated;
+        currentMatchIdx = -1;
+        renderMarkdown({ preserveScroll: true });
+        findInEditor(query, { selectMatch: false });
+      });
     }
 
     function openFindBar(focusInput = true) {
@@ -2078,32 +2055,18 @@ Start typing your Markdown here.
 
     // Formatting & Insert Helpers
     function insertHeading(hashes) {
-      const start = editor.selectionStart;
-      const val = editor.value;
-      const lineStart = val.lastIndexOf("\n", start - 1) + 1;
-      const lineEndIdx = val.indexOf("\n", start);
-      const lineEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
-      const currentLine = val.slice(lineStart, lineEnd);
-
+      const { lineStart, lineEnd, currentLine } = getLineBounds(editor.value, editor.selectionStart);
       const stripped = currentLine.replace(/^#{1,6}\s*/, "");
       const placeholder = stripped || "Heading";
       const updatedLine = `${hashes} ${placeholder}`;
-
       const textStart = lineStart + hashes.length + 1;
       replaceEditorRange(lineStart, lineEnd, updatedLine, textStart, textStart + placeholder.length);
     }
 
     function prefixCurrentLine(prefix) {
-      const start = editor.selectionStart;
-      const val = editor.value;
-      const lineStart = val.lastIndexOf("\n", start - 1) + 1;
-      const lineEndIdx = val.indexOf("\n", start);
-      const lineEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
-      const currentLine = val.slice(lineStart, lineEnd);
-
+      const { lineStart, lineEnd, currentLine } = getLineBounds(editor.value, editor.selectionStart);
       const content = currentLine.trim() ? currentLine : "item";
       const updatedLine = `${prefix}${content}`;
-
       const textStart = lineStart + prefix.length;
       replaceEditorRange(lineStart, lineEnd, updatedLine, textStart, textStart + content.length);
     }
@@ -2111,22 +2074,18 @@ Start typing your Markdown here.
     function insertLink() {
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
-      const val = editor.value;
-      const selected = val.slice(start, end) || "link text";
+      const selected = editor.value.slice(start, end) || "link text";
       const snippet = `[${selected}](https://example.com)`;
       const urlStart = start + selected.length + 3;
-
       replaceEditorRange(start, end, snippet, urlStart, urlStart + "https://example.com".length);
     }
 
     function insertImage() {
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
-      const val = editor.value;
-      const selected = val.slice(start, end) || "alt text";
+      const selected = editor.value.slice(start, end) || "alt text";
       const snippet = `![${selected}](https://example.com/image.png)`;
       const urlStart = start + selected.length + 4;
-
       replaceEditorRange(start, end, snippet, urlStart, urlStart + "https://example.com/image.png".length);
     }
 
@@ -2174,19 +2133,16 @@ Start typing your Markdown here.
     function insertCodeBlock() {
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
-      const val = editor.value;
-      const selected = val.slice(start, end) || "// code here";
+      const selected = editor.value.slice(start, end) || "// code here";
       const snippet = `\`\`\`js\n${selected}\n\`\`\``;
       const codeStart = start + 6;
-
       replaceEditorRange(start, end, snippet, codeStart, codeStart + selected.length);
     }
 
     function wrapSelection(prefix, suffix = prefix) {
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
-      const value = editor.value;
-      const selected = value.slice(start, end);
+      const selected = editor.value.slice(start, end);
       const placeholder = selected || "text";
       const replacement = `${prefix}${placeholder}${suffix}`;
 
@@ -2206,18 +2162,13 @@ Start typing your Markdown here.
       const end = editor.selectionEnd;
       if (start !== end) return false;
 
-      const val = editor.value;
-      const lineStart = val.lastIndexOf("\n", start - 1) + 1;
-      const lineEndIdx = val.indexOf("\n", start);
-      const lineEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
-      const currentLine = val.slice(lineStart, lineEnd);
+      const { lineStart, lineEnd, currentLine } = getLineBounds(editor.value, start);
 
       const taskEmptyMatch = currentLine.match(/^(\s*)([-*+])\s+\[[ xX]\]\s*$/);
       if (taskEmptyMatch) {
         e.preventDefault();
-        const cleanedLine = `${taskEmptyMatch[1]}`;
-        const pos = lineStart + cleanedLine.length;
-        replaceEditorRange(lineStart, lineEnd, cleanedLine, pos, pos);
+        const pos = lineStart + taskEmptyMatch[1].length;
+        replaceEditorRange(lineStart, lineEnd, taskEmptyMatch[1], pos, pos);
         return true;
       }
 
@@ -2233,9 +2184,8 @@ Start typing your Markdown here.
       const orderedEmptyMatch = currentLine.match(/^(\s*)(\d+)\.\s*$/);
       if (orderedEmptyMatch) {
         e.preventDefault();
-        const cleanedLine = `${orderedEmptyMatch[1]}`;
-        const pos = lineStart + cleanedLine.length;
-        replaceEditorRange(lineStart, lineEnd, cleanedLine, pos, pos);
+        const pos = lineStart + orderedEmptyMatch[1].length;
+        replaceEditorRange(lineStart, lineEnd, orderedEmptyMatch[1], pos, pos);
         return true;
       }
 
@@ -2252,9 +2202,8 @@ Start typing your Markdown here.
       const bulletEmptyMatch = currentLine.match(/^(\s*)([-*+])\s*$/);
       if (bulletEmptyMatch) {
         e.preventDefault();
-        const cleanedLine = `${bulletEmptyMatch[1]}`;
-        const pos = lineStart + cleanedLine.length;
-        replaceEditorRange(lineStart, lineEnd, cleanedLine, pos, pos);
+        const pos = lineStart + bulletEmptyMatch[1].length;
+        replaceEditorRange(lineStart, lineEnd, bulletEmptyMatch[1], pos, pos);
         return true;
       }
 
@@ -2313,18 +2262,18 @@ Start typing your Markdown here.
         wrapSelection("*");
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey && historyIndex > 0) {
-        const beforeVal = editor.value;
-        requestAnimationFrame(() => {
-          if (editor.value === beforeVal && historyIndex > 0) {
-            undoSnapshot();
-          }
-        });
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
+        if (historyIndex > 0) {
+          e.preventDefault();
+          undoSnapshot();
+        }
         return;
       }
       if ((e.metaKey || e.ctrlKey) && ((e.key.toLowerCase() === "z" && e.shiftKey) || e.key.toLowerCase() === "y")) {
-        e.preventDefault();
-        redoSnapshot();
+        if (historyIndex < historyStack.length - 1) {
+          e.preventDefault();
+          redoSnapshot();
+        }
         return;
       }
 
@@ -2334,12 +2283,10 @@ Start typing your Markdown here.
         e.preventDefault();
         const start = editor.selectionStart;
         const end = editor.selectionEnd;
-        const val = editor.value;
 
         if (e.shiftKey) {
-          const lineStart = val.lastIndexOf("\n", start - 1) + 1;
-          const linePrefix = val.slice(lineStart, lineStart + 2);
-          if (linePrefix === "  ") {
+          const { lineStart } = getLineBounds(editor.value, start);
+          if (editor.value.slice(lineStart, lineStart + 2) === "  ") {
             replaceEditorRange(
               lineStart,
               lineStart + 2,
@@ -2428,10 +2375,12 @@ Start typing your Markdown here.
             title: "Import Markdown File",
             message: `Importing "${file.name}" will overwrite your current editor content. Proceed?`,
             confirmLabel: "Import File",
-            danger: true
+            danger: true,
+            trigger: openDataModalBtn
           });
           if (!confirmed) return;
         }
+        clearTimeout(renderDebounceTimer);
         editor.value = incoming;
         editor.scrollTop = 0;
         preview.scrollTop = 0;
@@ -2443,7 +2392,7 @@ Start typing your Markdown here.
       reader.readAsText(file);
     }
 
-    editor.addEventListener("input", () => renderMarkdown({ preserveScroll: true }));
+    editor.addEventListener("input", () => scheduleMarkdownRender(40));
 
     function importFileFromInput(event) {
       const file = event.target.files?.[0];
@@ -2578,6 +2527,8 @@ Start typing your Markdown here.
     table { border-collapse: collapse; width: 100%; margin: 16px 0; }
     th, td { border: 1px solid #dfe4f0; padding: 8px 12px; text-align: left; }
     th { background: #f0f2f8; }
+    ul.contains-task-list { list-style: none; padding-left: 4px; }
+    li.task-list-item { display: flex; align-items: flex-start; gap: 8px; }
   </style>
 </head>
 <body>
