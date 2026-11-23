@@ -14,16 +14,18 @@
       --surface: #ffffff;
       --surface-2: #f0f2f8;
       --surface-3: #e7ebf5;
-      --surface-alt: #f0f2f8;
       --text: #141824;
       --text-muted: #5b647a;
-      --muted: #5b647a;
       --border: #dfe4f0;
       --accent: #4f46e5;
       --accent-hover: #4338ca;
       --accent-soft: rgba(79, 70, 229, 0.12);
-      --code-bg: #f0f2f8;
-      --blockquote-border: #c7d0e6;
+      --success: #059669;
+      --success-soft: rgba(5, 150, 105, 0.12);
+      --danger: #dc2626;
+      --danger-soft: rgba(220, 38, 38, 0.12);
+      --warning: #d97706;
+      --warning-soft: rgba(217, 119, 6, 0.12);
       --drop-bg: rgba(79, 70, 229, 0.08);
       --shadow: 0 10px 30px rgba(20, 24, 36, 0.06);
       --radius: 14px;
@@ -33,33 +35,34 @@
       --split-left: 50%;
     }
 
-    [data-theme="dark"],
-    :root[data-theme="dark"] {
+    [data-theme="dark"] {
       --bg: #0c0f17;
       --surface: #141925;
       --surface-2: #1b2232;
       --surface-3: #232c40;
-      --surface-alt: #1b2232;
       --text: #eef2ff;
       --text-muted: #98a2b3;
-      --muted: #98a2b3;
       --border: #263046;
       --accent: #6366f1;
       --accent-hover: #818cf8;
       --accent-soft: rgba(99, 102, 241, 0.18);
-      --code-bg: #1b2232;
-      --blockquote-border: #384666;
+      --success: #10b981;
+      --success-soft: rgba(16, 185, 129, 0.16);
+      --danger: #f87171;
+      --danger-soft: rgba(248, 113, 113, 0.16);
+      --warning: #fbbf24;
+      --warning-soft: rgba(251, 191, 36, 0.16);
       --drop-bg: rgba(99, 102, 241, 0.14);
       --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
     }
 
     *, *::before, *::after {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
     }
 
     html, body {
+      margin: 0;
+      padding: 0;
       height: 100vh;
       font-family: var(--font);
       background: var(--bg);
@@ -91,61 +94,189 @@
       color: inherit;
     }
 
-    /* Top Toolbar */
-    header {
+    button {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, opacity 0.15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--surface-3);
+      border-color: var(--text-muted);
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.985);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    button.success {
+      background: var(--success);
+      border-color: var(--success);
+      color: #ffffff;
+    }
+
+    button.danger {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #ffffff;
+    }
+
+    button.danger-ghost {
+      color: var(--danger);
+      border-color: transparent;
+      background: transparent;
+    }
+
+    button.danger-ghost:hover:not(:disabled) {
+      background: var(--danger-soft);
+      border-color: transparent;
+    }
+
+    button.sm {
+      padding: 5px 9px;
+      font-size: 0.8rem;
+      border-radius: 7px;
+    }
+
+    button.full {
+      width: 100%;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 11px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    input.compact,
+    select.compact {
+      padding: 6px 9px;
+      font-size: 0.8rem;
+      border-radius: 7px;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      background: var(--surface);
+    }
+
+    input[type="file"].hidden-file {
+      display: none;
+    }
+
+    /* Header (Reference Style) */
+    .app-header {
       position: sticky;
       top: 0;
       z-index: 30;
-      min-height: 56px;
-      padding: 8px 18px;
-      background: color-mix(in srgb, var(--surface) 88%, transparent);
       backdrop-filter: blur(12px);
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-inner {
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
       flex-wrap: wrap;
-      flex-shrink: 0;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-weight: 700;
-      font-size: 1rem;
-      letter-spacing: -0.015em;
+      gap: 11px;
       min-width: 0;
     }
 
-    .brand::before {
-      content: "✍️";
-      width: 34px;
-      height: 34px;
+    .brand-logo {
+      width: 38px;
+      height: 38px;
       border-radius: 10px;
       background: linear-gradient(135deg, var(--accent), #9333ea);
       color: #fff;
       display: grid;
       place-items: center;
-      font-size: 0.95rem;
+      font-weight: 700;
+      font-size: 1.05rem;
       flex-shrink: 0;
       box-shadow: 0 4px 12px var(--accent-soft);
     }
 
-    .file-badge {
-      font-size: 0.76rem;
+    .brand-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge {
+      font-size: 0.72rem;
       font-weight: 600;
       font-family: var(--mono);
-      color: var(--text-muted);
-      background: var(--surface-2);
-      padding: 3px 10px;
+      padding: 3px 8px;
       border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--text-muted);
       border: 1px solid var(--border);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge.accent {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: transparent;
+    }
+
+    .badge.success {
+      background: var(--success-soft);
+      color: var(--success);
+      border-color: transparent;
+    }
+
+    .file-badge {
       max-width: 220px;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
       cursor: pointer;
       transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
@@ -156,11 +287,12 @@
       color: var(--accent);
     }
 
-    .toolbar-actions {
+    .header-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
+      flex-shrink: 0;
     }
 
     .btn-group {
@@ -192,173 +324,101 @@
       color: #ffffff;
     }
 
-    button, .btn-label {
-      font-size: 0.82rem;
-      font-weight: 500;
-      padding: 6px 11px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, opacity 0.15s ease;
-    }
-
-    button:hover:not(:disabled), .btn-label:hover {
-      background: var(--surface-3);
-      border-color: var(--text-muted);
-    }
-
-    button:active:not(:disabled), .btn-label:active {
-      transform: scale(0.985);
-    }
-
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    button.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #ffffff;
-    }
-
-    button.primary:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
-
-    /* Collapsible Import / Export Dropdown */
-    .menu-dropdown {
-      position: relative;
-      display: inline-block;
-    }
-
-    .menu-panel {
-      display: none;
-      position: absolute;
-      right: 0;
-      top: calc(100% + 6px);
-      min-width: 205px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 6px;
-      z-index: 40;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .menu-dropdown.open .menu-panel {
-      display: flex;
-    }
-
-    .menu-section-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      padding: 5px 9px 2px;
-    }
-
-    .menu-divider {
-      height: 1px;
-      background: var(--border);
-      margin: 4px 0;
-    }
-
-    .menu-item {
+    /* Main Container & Card Workspace (Reference Style) */
+    .container {
+      flex: 1;
       width: 100%;
-      justify-content: flex-start;
-      background: transparent;
-      border-color: transparent;
-      border-radius: 7px;
-      padding: 7px 9px;
-      font-size: 0.82rem;
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
-    .menu-item:hover {
-      background: var(--surface-2);
-      border-color: var(--border);
-    }
-
-    input[type="file"] {
-      display: none;
-    }
-
-    /* Split Workspace */
-    main {
+    .workspace {
       flex: 1;
       display: grid;
-      grid-template-columns: var(--split-left) 6px 1fr;
+      grid-template-columns: var(--split-left) 12px 1fr;
       min-height: 0;
       position: relative;
-      background: var(--bg);
     }
 
-    main.mode-editor {
+    .workspace.mode-editor {
       grid-template-columns: 1fr;
     }
 
-    main.mode-editor .preview-pane,
-    main.mode-editor .split-resizer {
+    .workspace.mode-editor .preview-pane,
+    .workspace.mode-editor .split-resizer {
       display: none;
     }
 
-    main.mode-preview {
+    .workspace.mode-preview {
       grid-template-columns: 1fr;
     }
 
-    main.mode-preview .editor-pane,
-    main.mode-preview .split-resizer {
+    .workspace.mode-preview .editor-pane,
+    .workspace.mode-preview .split-resizer {
       display: none;
     }
 
     .split-resizer {
-      background: var(--border);
       cursor: col-resize;
       position: relative;
       z-index: 20;
-      transition: background 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       touch-action: none;
     }
 
-    .split-resizer:hover,
-    body.resizing-panes .split-resizer {
-      background: var(--accent);
+    .split-resizer::after {
+      content: "";
+      width: 4px;
+      height: 44px;
+      border-radius: 999px;
+      background: var(--border);
+      transition: background 0.15s ease, height 0.15s ease;
     }
 
-    .pane {
+    .split-resizer:hover::after,
+    body.resizing-panes .split-resizer::after {
+      background: var(--accent);
+      height: 64px;
+    }
+
+    /* Card (Reference Style) */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+      min-height: 0;
       display: flex;
       flex-direction: column;
-      min-height: 0;
-      min-width: 0;
-      overflow: hidden;
       position: relative;
-      background: var(--surface);
     }
 
-    .pane-header {
-      padding: 10px 14px;
-      font-size: 0.76rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
-      background: var(--surface);
+    .card-header {
+      padding: 12px 16px;
       border-bottom: 1px solid var(--border);
       display: flex;
+      align-items: center;
       justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .card-title {
+      font-size: 0.96rem;
+      font-weight: 700;
+      display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
+      margin: 0;
     }
 
     .format-mini-bar {
@@ -366,13 +426,11 @@
       align-items: center;
       gap: 4px;
       flex-wrap: wrap;
-      text-transform: none;
-      letter-spacing: normal;
     }
 
     .format-mini-bar button {
       padding: 4px 8px;
-      font-size: 0.76rem;
+      font-size: 0.78rem;
       border-radius: 7px;
       background: var(--surface-2);
     }
@@ -382,70 +440,28 @@
       border-color: var(--text-muted);
     }
 
-    /* Styled formatting glyphs inside toolbar buttons */
-    .fmt-h1 {
-      font-weight: 900;
-      font-size: 0.88rem;
-      letter-spacing: -0.03em;
-    }
-
-    .fmt-h2 {
-      font-weight: 800;
-      font-size: 0.8rem;
-      letter-spacing: -0.02em;
-    }
-
-    .fmt-h3 {
-      font-weight: 700;
-      font-size: 0.74rem;
-      color: var(--text-muted);
-    }
-
-    .fmt-bold {
-      font-weight: 900;
-      font-size: 0.84rem;
-    }
-
-    .fmt-italic {
-      font-style: italic;
-      font-family: Georgia, "Times New Roman", serif;
-      font-weight: 600;
-      font-size: 0.86rem;
-    }
-
-    .fmt-strike {
-      text-decoration: line-through;
-      font-weight: 600;
-    }
-
-    .fmt-code {
-      font-family: var(--mono);
-      font-weight: 700;
-      font-size: 0.74rem;
-    }
-
-    .fmt-quote {
-      font-style: italic;
-      font-family: Georgia, "Times New Roman", serif;
-    }
+    .fmt-h1 { font-weight: 900; font-size: 0.88rem; letter-spacing: -0.03em; }
+    .fmt-h2 { font-weight: 800; font-size: 0.8rem; letter-spacing: -0.02em; }
+    .fmt-h3 { font-weight: 700; font-size: 0.74rem; color: var(--text-muted); }
+    .fmt-bold { font-weight: 900; font-size: 0.84rem; }
+    .fmt-italic { font-style: italic; font-family: Georgia, "Times New Roman", serif; font-weight: 600; font-size: 0.86rem; }
+    .fmt-strike { text-decoration: line-through; font-weight: 600; }
+    .fmt-code { font-family: var(--mono); font-weight: 700; font-size: 0.74rem; }
+    .fmt-quote { font-style: italic; font-family: Georgia, "Times New Roman", serif; }
 
     .editor-meta {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-      color: var(--text-muted);
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
     /* Table Size Picker Popover */
     .table-picker {
       display: none;
       position: absolute;
-      top: 52px;
-      left: 14px;
+      top: 56px;
+      left: 16px;
       z-index: 35;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -454,8 +470,6 @@
       padding: 11px 12px;
       align-items: center;
       gap: 8px;
-      text-transform: none;
-      letter-spacing: normal;
       font-size: 0.8rem;
       font-weight: 600;
       color: var(--text);
@@ -470,41 +484,18 @@
       padding: 5px 7px;
       font-size: 0.8rem;
       border-radius: 7px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-    }
-
-    .table-picker input[type="number"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft);
-      background: var(--surface);
-    }
-
-    .table-picker button {
-      padding: 5px 10px;
-      font-size: 0.78rem;
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #ffffff;
-    }
-
-    .table-picker button:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
     }
 
     /* Find & Replace Bar */
     .find-bar {
       display: none;
-      padding: 8px 14px;
+      padding: 9px 16px;
       background: var(--surface-2);
       border-bottom: 1px solid var(--border);
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
+      flex-shrink: 0;
     }
 
     .find-bar.open {
@@ -512,26 +503,11 @@
     }
 
     .find-bar input {
-      font-size: 0.8rem;
-      padding: 6px 9px;
-      border-radius: 7px;
-      border: 1px solid var(--border);
       background: var(--surface);
-      color: var(--text);
       min-width: 135px;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .find-bar input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft);
     }
 
     .find-bar button {
-      padding: 5px 9px;
-      font-size: 0.78rem;
-      border-radius: 7px;
       background: var(--surface);
     }
 
@@ -539,27 +515,16 @@
       background: var(--surface-3);
     }
 
-    .find-count {
-      font-size: 0.74rem;
-      font-family: var(--mono);
-      font-weight: 600;
-      color: var(--text-muted);
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      font-variant-numeric: tabular-nums;
-    }
-
     /* Heading Outline Bar */
     .outline-bar {
       display: none;
-      padding: 8px 14px;
+      padding: 9px 16px;
       background: var(--surface-2);
       border-bottom: 1px solid var(--border);
       gap: 6px;
       flex-wrap: wrap;
       align-items: center;
+      flex-shrink: 0;
     }
 
     .outline-bar.open {
@@ -575,7 +540,6 @@
       border: 1px solid var(--border);
       color: var(--text);
       cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
 
     .outline-chip:hover {
@@ -584,14 +548,8 @@
       color: var(--accent);
     }
 
-    .outline-chip.lvl-2 {
-      margin-left: 8px;
-    }
-
-    .outline-chip.lvl-3 {
-      margin-left: 16px;
-      color: var(--text-muted);
-    }
+    .outline-chip.lvl-2 { margin-left: 8px; }
+    .outline-chip.lvl-3 { margin-left: 16px; color: var(--text-muted); }
 
     #editor {
       flex: 1;
@@ -611,8 +569,8 @@
     #preview {
       flex: 1;
       overflow-y: auto;
-      padding: 24px 32px;
-      background: var(--bg);
+      padding: 22px 28px;
+      background: var(--surface);
       line-height: 1.65;
       -webkit-overflow-scrolling: touch;
     }
@@ -620,12 +578,11 @@
     .fallback-banner {
       font-size: 0.8rem;
       color: var(--text-muted);
-      background: var(--surface);
+      background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 10px 14px;
       margin-bottom: 16px;
-      box-shadow: var(--shadow);
     }
 
     /* Drag & Drop Overlay */
@@ -638,7 +595,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 50;
+      z-index: 55;
       font-size: 1.15rem;
       font-weight: 700;
       color: var(--accent);
@@ -647,6 +604,167 @@
 
     body.dragging .drop-overlay {
       display: flex;
+    }
+
+    /* Modals (Reference Style) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(12, 15, 23, 0.55);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.hidden {
+      display: none;
+    }
+
+    .modal-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 460px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-dialog.sm {
+      max-width: 390px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 0.96rem;
+      font-weight: 700;
+    }
+
+    .modal-body-text {
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .field > label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .dropzone {
+      flex: 1;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      padding: 16px 12px;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .export-box {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .export-actions-stack {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    /* Toast Notifications (Reference Style) */
+    .toast-container {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 99;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 360px;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      box-shadow: var(--shadow);
+      animation: fadeIn 0.16s ease;
+    }
+
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+    .toast.warning { border-left-color: var(--warning); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hidden {
+      display: none !important;
     }
 
     /* Rendered Markdown Styles */
@@ -692,15 +810,6 @@
       margin-bottom: 16px;
     }
 
-    .markdown-body a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    .markdown-body a:hover {
-      text-decoration: underline;
-    }
-
     .markdown-body ul,
     .markdown-body ol {
       padding-left: 24px;
@@ -710,7 +819,6 @@
       margin-top: 4px;
     }
 
-    /* Task / Checkbox List Support */
     .markdown-body ul.contains-task-list {
       list-style: none;
       padding-left: 4px;
@@ -734,7 +842,7 @@
     .markdown-body blockquote {
       padding: 8px 16px;
       color: var(--text-muted);
-      background: var(--surface);
+      background: var(--surface-2);
       border: 1px solid var(--border);
       border-left: 4px solid var(--accent);
       border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -751,12 +859,11 @@
 
     .markdown-body pre {
       position: relative;
-      background: var(--surface);
+      background: var(--surface-2);
       padding: 14px 16px;
       border-radius: var(--radius-sm);
       overflow-x: auto;
       border: 1px solid var(--border);
-      box-shadow: var(--shadow);
     }
 
     .markdown-body pre code {
@@ -774,7 +881,7 @@
       padding: 4px 9px;
       font-size: 0.74rem;
       border-radius: 7px;
-      background: var(--surface-2);
+      background: var(--surface);
       border: 1px solid var(--border);
       color: var(--text);
       opacity: 0.9;
@@ -830,22 +937,53 @@
         min-height: 100vh;
         overflow: auto;
       }
-      main {
+      .workspace {
         grid-template-columns: 1fr;
-        grid-template-rows: 45vh 55vh;
+        grid-template-rows: 48vh 54vh;
+        gap: 14px;
       }
-      main .split-resizer {
+      .workspace .split-resizer {
         display: none;
       }
-      main.mode-editor,
-      main.mode-preview {
+      .workspace.mode-editor,
+      .workspace.mode-preview {
         grid-template-rows: 75vh;
-      }
-      .editor-pane {
-        border-bottom: 1px solid var(--border);
       }
       #preview {
         padding: 18px 16px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .header-inner {
+        padding: 10px 14px;
+        gap: 8px;
+      }
+      .brand {
+        gap: 8px;
+      }
+      .brand-logo {
+        width: 32px;
+        height: 32px;
+        font-size: 0.92rem;
+        border-radius: 8px;
+      }
+      .brand-title {
+        font-size: 0.9rem;
+        line-height: 1.22;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+      }
+      #themeToggleBtn {
+        padding: 6px 9px;
+        font-size: 0.78rem;
+      }
+      .container {
+        padding: 12px 14px 28px;
+      }
+      .data-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -856,17 +994,28 @@
         background: #fff;
         color: #000;
       }
-      header,
+      .app-header,
       .editor-pane,
-      .pane-header,
+      .card-header,
       .outline-bar,
       .copy-code-btn,
       .drop-overlay,
+      .modal-backdrop,
+      .toast-container,
       .split-resizer {
         display: none !important;
       }
-      main {
+      .container,
+      .workspace {
         display: block;
+        padding: 0;
+        margin: 0;
+        max-width: none;
+      }
+      .card {
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
       }
       #preview {
         overflow: visible;
@@ -879,112 +1028,160 @@
 <body>
   <div class="drop-overlay">Drop a .md or .txt file to import</div>
 
-  <header>
-    <div class="brand">
-      <span>Live Markdown Editor</span>
-      <span id="fileNameBadge" class="file-badge" title="Click to rename document">untitled.md</span>
-    </div>
-
-    <div class="toolbar-actions">
-      <div class="btn-group" aria-label="View mode">
-        <button id="modeSplitBtn" type="button" class="active">Split</button>
-        <button id="modeEditorBtn" type="button">Editor</button>
-        <button id="modePreviewBtn" type="button">Preview</button>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo">✍️</div>
+        <div class="brand-title">Live Markdown Editor</div>
+        <span id="fileNameBadge" class="badge file-badge" title="Click to rename document">untitled.md</span>
       </div>
 
-      <button id="themeToggleBtn" type="button" title="Toggle Light / Dark theme">🌙 Dark Mode</button>
-
-      <div class="menu-dropdown" id="ioMenuDropdown">
-        <button id="ioMenuToggle" class="primary" type="button" aria-expanded="false" aria-controls="ioMenuPanel">
-          Import / Export ▾
-        </button>
-        <div class="menu-panel" id="ioMenuPanel">
-          <span class="menu-section-label">Import</span>
-          <label class="btn-label menu-item" for="fileInput">
-            Import .md / .txt
-          </label>
-          <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown,text/plain" />
-
-          <div class="menu-divider"></div>
-          <span class="menu-section-label">Export</span>
-          <button class="menu-item" type="button" data-export="copy-md">Copy Markdown</button>
-          <button class="menu-item" type="button" data-export="copy-html">Copy HTML</button>
-          <button class="menu-item" type="button" data-export="save-md">Save .md</button>
-          <button class="menu-item" type="button" data-export="save-txt">Save .txt</button>
-          <button class="menu-item" type="button" data-export="save-html">Save .html</button>
-          <button class="menu-item" type="button" data-export="print">Print / PDF</button>
+      <div class="header-actions">
+        <div class="btn-group" aria-label="View mode">
+          <button id="modeSplitBtn" type="button" class="active">Split</button>
+          <button id="modeEditorBtn" type="button">Editor</button>
+          <button id="modePreviewBtn" type="button">Preview</button>
         </div>
+
+        <button id="printBtn" type="button" class="sm" data-export="print" title="Print or export as PDF">🖨️ Print</button>
+
+        <button id="openDataModalBtn" class="sm primary" type="button" onclick="openDataModal()">
+          📂 Data Management
+        </button>
+
+        <button id="themeToggleBtn" type="button" title="Toggle light/dark theme" aria-label="Toggle light/dark theme">
+          <span id="dark-mode-icon">🌙 Dark</span>
+        </button>
       </div>
     </div>
   </header>
 
-  <main id="workspace">
-    <section class="pane editor-pane">
-      <div class="pane-header">
-        <span>Markdown Source</span>
-        <div class="format-mini-bar">
-          <button type="button" id="newDocBtn" title="Reset Document">New</button>
-          <button type="button" id="undoBtn" title="Undo Snapshot (Ctrl/Cmd+Z)" disabled>Undo</button>
-          <button type="button" id="redoBtn" title="Redo Snapshot (Ctrl/Cmd+Shift+Z)" disabled>Redo</button>
-          <button type="button" data-heading="#" title="Heading 1"><span class="fmt-h1">H1</span></button>
-          <button type="button" data-heading="##" title="Heading 2 / Subheading"><span class="fmt-h2">H2</span></button>
-          <button type="button" data-heading="###" title="Heading 3 / Subheading"><span class="fmt-h3">H3</span></button>
-          <button type="button" data-wrap="**" title="Bold (Ctrl/Cmd+B)"><span class="fmt-bold">B</span></button>
-          <button type="button" data-wrap="*" title="Italic (Ctrl/Cmd+I)"><span class="fmt-italic">I</span></button>
-          <button type="button" data-wrap="~~" title="Strikethrough"><span class="fmt-strike">S</span></button>
-          <button type="button" data-wrap="`" title="Inline Code"><span class="fmt-code">&lt;/&gt;</span></button>
-          <button type="button" data-action="link" title="Insert Link">🔗 Link</button>
-          <button type="button" data-action="image" title="Insert Image">🖼️ Image</button>
-          <button type="button" id="tablePickerBtn" title="Insert Table">⊞ Table ▾</button>
-          <button type="button" data-prefix="> " title="Blockquote"><span class="fmt-quote">“Quote”</span></button>
-          <button type="button" data-prefix="- " title="Bullet List">• List</button>
-          <button type="button" data-prefix="- [ ] " title="Task Checkbox">☑ Task</button>
-          <button type="button" data-action="codeblock" title="Insert Fenced Code Block"><span class="fmt-code">{ }</span></button>
-          <button type="button" id="findToggleBtn" title="Find & Replace (Ctrl/Cmd+F)">Find</button>
-          <button type="button" id="syncToggleBtn" title="Toggle synchronized scrolling">Sync: On</button>
+  <main class="container">
+    <div id="workspace" class="workspace">
+      <section class="card editor-pane">
+        <div class="card-header">
+          <h2 class="card-title">📝 Markdown Source</h2>
+          <div class="format-mini-bar">
+            <button type="button" id="newDocBtn" title="Reset Document">New</button>
+            <button type="button" id="undoBtn" title="Undo Snapshot (Ctrl/Cmd+Z)" disabled>Undo</button>
+            <button type="button" id="redoBtn" title="Redo Snapshot (Ctrl/Cmd+Shift+Z)" disabled>Redo</button>
+            <button type="button" data-heading="#" title="Heading 1"><span class="fmt-h1">H1</span></button>
+            <button type="button" data-heading="##" title="Heading 2 / Subheading"><span class="fmt-h2">H2</span></button>
+            <button type="button" data-heading="###" title="Heading 3 / Subheading"><span class="fmt-h3">H3</span></button>
+            <button type="button" data-wrap="**" title="Bold (Ctrl/Cmd+B)"><span class="fmt-bold">B</span></button>
+            <button type="button" data-wrap="*" title="Italic (Ctrl/Cmd+I)"><span class="fmt-italic">I</span></button>
+            <button type="button" data-wrap="~~" title="Strikethrough"><span class="fmt-strike">S</span></button>
+            <button type="button" data-wrap="`" title="Inline Code"><span class="fmt-code">&lt;/&gt;</span></button>
+            <button type="button" data-action="link" title="Insert Link">🔗 Link</button>
+            <button type="button" data-action="image" title="Insert Image">🖼️ Image</button>
+            <button type="button" id="tablePickerBtn" title="Insert Table">⊞ Table ▾</button>
+            <button type="button" data-prefix="> " title="Blockquote"><span class="fmt-quote">“Quote”</span></button>
+            <button type="button" data-prefix="- " title="Bullet List">• List</button>
+            <button type="button" data-prefix="- [ ] " title="Task Checkbox">☑ Task</button>
+            <button type="button" data-action="codeblock" title="Insert Fenced Code Block"><span class="fmt-code">{ }</span></button>
+            <button type="button" id="findToggleBtn" title="Find & Replace (Ctrl/Cmd+F)">Find</button>
+            <button type="button" id="syncToggleBtn" title="Toggle synchronized scrolling">Sync: On</button>
+          </div>
+          <div class="editor-meta">
+            <span id="cursorPos" class="badge">Ln 1, Col 1</span>
+            <span id="stats" class="badge">0 lines · 0 words · 0 chars</span>
+          </div>
         </div>
-        <div class="editor-meta">
-          <span id="cursorPos">Ln 1, Col 1</span>
-          <span id="stats">0 lines · 0 words · 0 chars</span>
+
+        <div id="tablePicker" class="table-picker" aria-label="Select table size">
+          <label for="tableRowsInput">Rows</label>
+          <input id="tableRowsInput" class="compact" type="number" min="1" max="20" value="2" />
+          <label for="tableColsInput">Cols</label>
+          <input id="tableColsInput" class="compact" type="number" min="1" max="12" value="2" />
+          <button id="insertTableBtn" type="button" class="sm primary">Insert</button>
         </div>
-      </div>
 
-      <div id="tablePicker" class="table-picker" aria-label="Select table size">
-        <label for="tableRowsInput">Rows</label>
-        <input id="tableRowsInput" type="number" min="1" max="20" value="2" />
-        <label for="tableColsInput">Cols</label>
-        <input id="tableColsInput" type="number" min="1" max="12" value="2" />
-        <button id="insertTableBtn" type="button">Insert</button>
-      </div>
-
-      <div id="findBar" class="find-bar" aria-label="Find and Replace">
-        <input id="findInput" type="text" placeholder="Find..." />
-        <input id="replaceInput" type="text" placeholder="Replace with..." />
-        <button id="findPrevBtn" type="button">Prev</button>
-        <button id="findNextBtn" type="button">Next</button>
-        <button id="replaceOneBtn" type="button">Replace</button>
-        <button id="replaceAllBtn" type="button">Replace All</button>
-        <span id="findCount" class="find-count">0 matches</span>
-        <button id="findCloseBtn" type="button" title="Close">✕</button>
-      </div>
-
-      <textarea id="editor" placeholder="Type or paste Markdown here, or drag and drop a .md file anywhere..."></textarea>
-    </section>
-
-    <div id="splitResizer" class="split-resizer" role="separator" aria-orientation="vertical" aria-label="Resize panes (double-click to reset)" title="Drag to resize panes · Double-click to reset"></div>
-
-    <section class="pane preview-pane">
-      <div class="pane-header">
-        <span>Live Preview</span>
-        <div class="format-mini-bar">
-          <button id="outlineToggleBtn" type="button" title="Toggle Heading Outline">Outline</button>
+        <div id="findBar" class="find-bar" aria-label="Find and Replace">
+          <input id="findInput" class="compact" type="text" placeholder="Find..." />
+          <input id="replaceInput" class="compact" type="text" placeholder="Replace with..." />
+          <button id="findPrevBtn" class="sm" type="button">Prev</button>
+          <button id="findNextBtn" class="sm" type="button">Next</button>
+          <button id="replaceOneBtn" class="sm" type="button">Replace</button>
+          <button id="replaceAllBtn" class="sm" type="button">Replace All</button>
+          <span id="findCount" class="badge">0 matches</span>
+          <button id="findCloseBtn" class="sm" type="button" title="Close">✕</button>
         </div>
-        <span>Auto-Saved</span>
-      </div>
-      <div id="outlineBar" class="outline-bar" aria-label="Heading Outline"></div>
-      <article id="preview" class="markdown-body"></article>
-    </section>
+
+        <textarea id="editor" placeholder="Type or paste Markdown here, or drag and drop a .md file anywhere..."></textarea>
+      </section>
+
+      <div id="splitResizer" class="split-resizer" role="separator" aria-orientation="vertical" aria-label="Resize panes (double-click to reset)" title="Drag to resize panes · Double-click to reset"></div>
+
+      <section class="card preview-pane">
+        <div class="card-header">
+          <h2 class="card-title">👁️ Live Preview</h2>
+          <div class="format-mini-bar">
+            <button id="outlineToggleBtn" type="button" title="Toggle Heading Outline">Outline</button>
+          </div>
+          <span class="badge success">Auto-Saved</span>
+        </div>
+        <div id="outlineBar" class="outline-bar" aria-label="Heading Outline"></div>
+        <article id="preview" class="markdown-body"></article>
+      </section>
+    </div>
   </main>
+
+  <!-- Data Management Modal -->
+  <div id="data-modal" onclick="handleBackdropClick(event, 'data-modal')" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">📂 Data Management</h3>
+        <button type="button" class="sm" onclick="closeDataModal()" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="data-grid">
+        <div class="field" style="flex: 1;">
+          <label>📥 Import Markdown / Text</label>
+          <label id="drop-zone" ondragover="handleModalDragOver(event)" ondragleave="handleModalDragLeave(event)" ondrop="handleModalDrop(event)" class="dropzone">
+            <span style="font-size: 1.25rem;">📄</span>
+            <span style="font-size: 0.78rem; font-weight: 600;">Drag .md / .txt here or click to browse</span>
+            <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown,text/plain" onchange="importFileFromInput(event)" class="hidden-file" />
+          </label>
+        </div>
+
+        <div class="field" style="flex: 1;">
+          <label>📤 Export Document</label>
+          <div class="export-box">
+            <span style="font-size: 1.25rem;">💾</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">Save or copy your current notes</span>
+            <div class="export-actions-stack">
+              <button type="button" class="primary sm full" data-export="save-md">Save .md</button>
+              <button type="button" class="sm full" data-export="save-html">Save .html</button>
+              <button type="button" class="sm full" data-export="save-txt">Save .txt</button>
+              <button type="button" class="sm full" data-export="copy-md">Copy Markdown</button>
+              <button type="button" class="sm full" data-export="copy-html">Copy HTML</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="sm" onclick="closeDataModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" onclick="handleBackdropClick(event, 'confirm-modal')" class="modal-backdrop hidden">
+    <div class="modal-dialog sm">
+      <div class="modal-header">
+        <h3 id="confirm-title" class="modal-title">Confirm Action</h3>
+      </div>
+      <p id="confirm-message" class="modal-body-text"></p>
+      <div class="modal-footer">
+        <button type="button" class="sm" onclick="closeConfirmModal(false)">Cancel</button>
+        <button id="confirm-ok-btn" type="button" class="sm danger" onclick="closeConfirmModal(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script>
     const STORAGE_KEY = "live_md_viewer_content_v1";
@@ -1000,7 +1197,6 @@ Start typing your Markdown here.
     const splitResizer = document.getElementById("splitResizer");
     const editor = document.getElementById("editor");
     const preview = document.getElementById("preview");
-    const fileInput = document.getElementById("fileInput");
     const fileNameBadge = document.getElementById("fileNameBadge");
     const stats = document.getElementById("stats");
     const cursorPos = document.getElementById("cursorPos");
@@ -1008,8 +1204,6 @@ Start typing your Markdown here.
     const modeSplitBtn = document.getElementById("modeSplitBtn");
     const modeEditorBtn = document.getElementById("modeEditorBtn");
     const modePreviewBtn = document.getElementById("modePreviewBtn");
-    const ioMenuDropdown = document.getElementById("ioMenuDropdown");
-    const ioMenuToggle = document.getElementById("ioMenuToggle");
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     const hljsTheme = document.getElementById("hljsTheme");
     const newDocBtn = document.getElementById("newDocBtn");
@@ -1037,6 +1231,63 @@ Start typing your Markdown here.
     const outlineToggleBtn = document.getElementById("outlineToggleBtn");
     const outlineBar = document.getElementById("outlineBar");
 
+    let pendingConfirmResolver = null;
+
+    const toastContainer = document.getElementById("toast-container");
+    function showToast(message, type = "info", duration = 3000) {
+      if (!toastContainer) return;
+      const el = document.createElement("div");
+      el.className = `toast ${type}`;
+      el.textContent = message;
+      toastContainer.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        el.style.transition = "opacity 0.2s ease";
+        setTimeout(() => el.remove(), 220);
+      }, duration);
+    }
+
+    function requestConfirmation({ title, message, confirmLabel = "Confirm", danger = true }) {
+      return new Promise((resolve) => {
+        pendingConfirmResolver = resolve;
+        document.getElementById("confirm-title").textContent = title;
+        document.getElementById("confirm-message").textContent = message;
+        const okBtn = document.getElementById("confirm-ok-btn");
+        okBtn.textContent = confirmLabel;
+        okBtn.className = danger ? "sm danger" : "sm primary";
+        document.getElementById("confirm-modal").classList.remove("hidden");
+      });
+    }
+
+    function closeConfirmModal(confirmed) {
+      document.getElementById("confirm-modal").classList.add("hidden");
+      if (pendingConfirmResolver) {
+        const resolve = pendingConfirmResolver;
+        pendingConfirmResolver = null;
+        resolve(Boolean(confirmed));
+      }
+    }
+
+    function openDataModal() {
+      document.getElementById("data-modal").classList.remove("hidden");
+    }
+
+    function closeDataModal() {
+      document.getElementById("data-modal").classList.add("hidden");
+      const dz = document.getElementById("drop-zone");
+      if (dz) dz.classList.remove("dragover");
+    }
+
+    function handleBackdropClick(event, modalId) {
+      if (event.target.id === modalId) {
+        if (modalId === "confirm-modal") {
+          closeConfirmModal(false);
+        } else if (modalId === "data-modal") {
+          closeDataModal();
+        }
+      }
+    }
+
     if (typeof window.marked !== "undefined" && typeof window.marked.setOptions === "function") {
       window.marked.setOptions({
         gfm: true,
@@ -1063,7 +1314,6 @@ Start typing your Markdown here.
       };
     }
 
-    // Replaces a text range in editor while preserving native undo where possible and keeping scroll steady
     function replaceEditorRange(start, end, replacement, selectStart = null, selectEnd = null) {
       const prevEditorScrollTop = editor.scrollTop;
       const prevPreviewScrollTop = preview.scrollTop;
@@ -1106,12 +1356,10 @@ Start typing your Markdown here.
     }
 
     // Split-Pane Resize Logic
-    let splitPercent = 50;
     let isResizingSplit = false;
 
     function setSplitRatio(pct) {
       const clamped = Math.min(82, Math.max(18, Number(pct) || 50));
-      splitPercent = clamped;
       document.documentElement.style.setProperty("--split-left", `${clamped}%`);
     }
 
@@ -1152,6 +1400,7 @@ Start typing your Markdown here.
       const finalName = cleaned || "untitled.md";
       fileNameBadge.textContent = finalName;
       saveToStorage();
+      showToast(`Renamed to ${finalName}`, "info");
     }
 
     fileNameBadge.addEventListener("click", () => {
@@ -1162,10 +1411,16 @@ Start typing your Markdown here.
       }
     });
 
-    // Reset / New Document
-    newDocBtn.addEventListener("click", () => {
-      if (editor.value.trim() && !window.confirm("Start a new document and replace current notes?")) {
-        return;
+    // Reset / New Document (Reference Confirmation Modal)
+    newDocBtn.addEventListener("click", async () => {
+      if (editor.value.trim()) {
+        const confirmed = await requestConfirmation({
+          title: "Start New Document",
+          message: "Start a new document and replace your current notes?",
+          confirmLabel: "New Document",
+          danger: true
+        });
+        if (!confirmed) return;
       }
       editor.value = DEFAULT_MARKDOWN;
       editor.scrollTop = 0;
@@ -1173,6 +1428,7 @@ Start typing your Markdown here.
       fileNameBadge.textContent = "untitled.md";
       saveToStorage();
       renderMarkdown();
+      showToast("Started a new document", "info");
     });
 
     // Cursor Line & Column Indicator
@@ -1256,11 +1512,14 @@ Start typing your Markdown here.
     undoBtn.addEventListener("click", undoSnapshot);
     redoBtn.addEventListener("click", redoSnapshot);
 
-    // Light / Dark Mode Switch
+    // Light / Dark Mode Switch (Reference Style)
     function setPreviewTheme(theme) {
       const mode = theme === "dark" ? "dark" : "light";
       document.documentElement.setAttribute("data-theme", mode);
-      themeToggleBtn.textContent = mode === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode";
+      const iconEl = document.getElementById("dark-mode-icon");
+      if (iconEl) {
+        iconEl.textContent = mode === "dark" ? "☀️ Light" : "🌙 Dark";
+      }
       try {
         localStorage.setItem(STORAGE_THEME_KEY, mode);
       } catch {
@@ -1276,18 +1535,6 @@ Start typing your Markdown here.
     themeToggleBtn.addEventListener("click", () => {
       const current = document.documentElement.getAttribute("data-theme") || "light";
       setPreviewTheme(current === "dark" ? "light" : "dark");
-    });
-
-    // Collapsible Import / Export Dropdown
-    function setIoMenuOpen(open) {
-      ioMenuDropdown.classList.toggle("open", open);
-      ioMenuToggle.setAttribute("aria-expanded", String(open));
-    }
-
-    ioMenuToggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isOpen = ioMenuDropdown.classList.contains("open");
-      setIoMenuOpen(!isOpen);
     });
 
     function setTablePickerOpen(open) {
@@ -1307,9 +1554,6 @@ Start typing your Markdown here.
     });
 
     document.addEventListener("click", (e) => {
-      if (!ioMenuDropdown.contains(e.target)) {
-        setIoMenuOpen(false);
-      }
       if (!tablePicker.contains(e.target) && e.target !== tablePickerBtn) {
         setTablePickerOpen(false);
       }
@@ -1428,7 +1672,6 @@ Start typing your Markdown here.
       }
     }
 
-    // Shared helper to scan lines while tracking fenced code blocks
     function scanNonFencedLines(markdown, visitor) {
       const lines = markdown.split("\n");
       let activeFence = null;
@@ -1480,7 +1723,6 @@ Start typing your Markdown here.
         .trim();
     }
 
-    // Heading Outline & Jump
     function extractHeadings(markdown) {
       const headings = [];
       scanNonFencedLines(markdown, (line, lineIndex) => {
@@ -1528,7 +1770,7 @@ Start typing your Markdown here.
 
       if (!headings.length) {
         const empty = document.createElement("span");
-        empty.className = "find-count";
+        empty.className = "badge";
         empty.textContent = "No #–### headings found";
         outlineBar.appendChild(empty);
         return;
@@ -1555,7 +1797,6 @@ Start typing your Markdown here.
       if (open) renderOutline(editor.value);
     });
 
-    // Copy Code Block Buttons
     function addCopyCodeButtons() {
       preview.querySelectorAll("pre").forEach((pre) => {
         if (pre.querySelector(".copy-code-btn")) return;
@@ -1567,7 +1808,7 @@ Start typing your Markdown here.
         btn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const text = codeEl ? codeEl.textContent || "" : pre.textContent || "";
-          await copyToClipboard(text, btn);
+          await copyToClipboard(text, btn, "Code copied to clipboard");
         });
         pre.appendChild(btn);
       });
@@ -1615,7 +1856,6 @@ Start typing your Markdown here.
         highlightCodeBlocks();
         addCopyCodeButtons();
 
-        // Enable task checkboxes in preview and sync back to Markdown source
         const checkboxes = preview.querySelectorAll('li.task-list-item input[type="checkbox"]');
         const taskLines = getTaskLineIndices(raw);
 
@@ -1800,7 +2040,7 @@ Start typing your Markdown here.
     replaceOneBtn.addEventListener("click", replaceNext);
     replaceAllBtn.addEventListener("click", replaceAll);
 
-    // Formatting & Insert Helpers (scroll-safe)
+    // Formatting & Insert Helpers
     function insertHeading(hashes) {
       const start = editor.selectionStart;
       const val = editor.value;
@@ -1923,7 +2163,6 @@ Start typing your Markdown here.
       );
     }
 
-    // Smart List Continuation on Enter (bullet, task, and numbered lists)
     function handleListEnter(e) {
       if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false;
 
@@ -2141,31 +2380,65 @@ Start typing your Markdown here.
     function loadFile(file) {
       if (!file) return;
       if (!isSupportedTextFile(file)) {
-        alert(`"${file.name}" doesn't look like a Markdown or text file (.md, .markdown, .txt).`);
+        showToast(`"${file.name}" doesn't look like a Markdown or text file (.md, .markdown, .txt).`, "warning");
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = (e) => {
-        editor.value = String(e.target?.result ?? "");
+      reader.onload = async (e) => {
+        const incoming = String(e.target?.result ?? "");
+        if (editor.value.trim() && editor.value.trim() !== DEFAULT_MARKDOWN.trim()) {
+          const confirmed = await requestConfirmation({
+            title: "Import Markdown File",
+            message: `Importing "${file.name}" will overwrite your current editor content. Proceed?`,
+            confirmLabel: "Import File",
+            danger: true
+          });
+          if (!confirmed) return;
+        }
+        editor.value = incoming;
         editor.scrollTop = 0;
         preview.scrollTop = 0;
         fileNameBadge.textContent = file.name;
         renderMarkdown();
+        closeDataModal();
+        showToast(`Imported "${file.name}"`, "success");
       };
       reader.readAsText(file);
     }
 
     editor.addEventListener("input", () => renderMarkdown({ preserveScroll: true }));
 
-    fileInput.addEventListener("change", (e) => {
-      const file = e.target.files?.[0];
+    function importFileFromInput(event) {
+      const file = event.target.files?.[0];
       loadFile(file);
-      fileInput.value = "";
-      setIoMenuOpen(false);
-    });
+      event.target.value = "";
+    }
 
-    // Drag and drop support (files only)
+    // Modal Dropzone handlers
+    function handleModalDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById("drop-zone").classList.add("dragover");
+    }
+
+    function handleModalDragLeave(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById("drop-zone").classList.remove("dragover");
+    }
+
+    function handleModalDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById("drop-zone").classList.remove("dragover");
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        loadFile(files[0]);
+      }
+    }
+
+    // Global Drag and drop support
     let dragCounter = 0;
 
     function isFileDrag(e) {
@@ -2212,7 +2485,6 @@ Start typing your Markdown here.
     window.addEventListener("blur", () => {
       stopResizingSplit();
       resetDragState();
-      setIoMenuOpen(false);
       setTablePickerOpen(false);
     });
 
@@ -2220,9 +2492,14 @@ Start typing your Markdown here.
       if (e.key === "Escape") {
         stopResizingSplit();
         resetDragState();
-        setIoMenuOpen(false);
         setTablePickerOpen(false);
-        if (findBar.classList.contains("open")) closeFindBar();
+        if (!document.getElementById("confirm-modal").classList.contains("hidden")) {
+          closeConfirmModal(false);
+        } else if (!document.getElementById("data-modal").classList.contains("hidden")) {
+          closeDataModal();
+        } else if (findBar.classList.contains("open")) {
+          closeFindBar();
+        }
       }
     });
 
@@ -2305,7 +2582,7 @@ ${bodyHtml}
       return ok;
     }
 
-    async function copyToClipboard(text, btn) {
+    async function copyToClipboard(text, btn, successMsg = "Copied to clipboard") {
       let copied = false;
 
       if (navigator.clipboard && typeof navigator.clipboard.writeText === "function" && window.isSecureContext) {
@@ -2321,34 +2598,45 @@ ${bodyHtml}
         copied = fallbackExecCommandCopy(text);
       }
 
-      flashExportLabel(btn, copied ? "Copied!" : "Copy failed");
+      if (btn) {
+        flashExportLabel(btn, copied ? "Copied!" : "Copy failed");
+      }
+      showToast(copied ? successMsg : "Could not copy to clipboard", copied ? "success" : "error");
     }
 
     async function handleExportAction(action, btn) {
       switch (action) {
         case "copy-md":
-          await copyToClipboard(editor.value, btn);
+          await copyToClipboard(editor.value, btn, "Markdown copied to clipboard");
           break;
         case "copy-html":
-          await copyToClipboard(getCleanPreviewHtml(), btn);
+          await copyToClipboard(getCleanPreviewHtml(), btn, "HTML copied to clipboard");
           break;
-        case "save-md":
-          downloadFile(editor.value, getExportFileName("md"), "text/markdown;charset=utf-8");
-          setIoMenuOpen(false);
+        case "save-md": {
+          const name = getExportFileName("md");
+          downloadFile(editor.value, name, "text/markdown;charset=utf-8");
+          closeDataModal();
+          showToast(`Exported ${name}`, "success");
           break;
-        case "save-txt":
-          downloadFile(editor.value, getExportFileName("txt"), "text/plain;charset=utf-8");
-          setIoMenuOpen(false);
+        }
+        case "save-txt": {
+          const name = getExportFileName("txt");
+          downloadFile(editor.value, name, "text/plain;charset=utf-8");
+          closeDataModal();
+          showToast(`Exported ${name}`, "success");
           break;
+        }
         case "save-html": {
-          const docTitle = getExportFileName("html").replace(/\.html$/i, "");
+          const name = getExportFileName("html");
+          const docTitle = name.replace(/\.html$/i, "");
           const htmlDoc = buildStandaloneHtmlDocument(getCleanPreviewHtml(), docTitle);
-          downloadFile(htmlDoc, getExportFileName("html"), "text/html;charset=utf-8");
-          setIoMenuOpen(false);
+          downloadFile(htmlDoc, name, "text/html;charset=utf-8");
+          closeDataModal();
+          showToast(`Exported ${name}`, "success");
           break;
         }
         case "print":
-          setIoMenuOpen(false);
+          closeDataModal();
           window.print();
           break;
       }
