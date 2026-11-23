@@ -200,6 +200,9 @@
       position: sticky;
       top: 0;
       z-index: 30;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
       backdrop-filter: blur(12px);
       background: color-mix(in srgb, var(--surface) 88%, transparent);
       border-bottom: 1px solid var(--border);
@@ -208,6 +211,7 @@
 
     .header-inner {
       max-width: 1560px;
+      width: 100%;
       margin: 0 auto;
       padding: 12px 18px;
       display: flex;
@@ -222,6 +226,7 @@
       align-items: center;
       gap: 11px;
       min-width: 0;
+      max-width: 100%;
     }
 
     .brand-logo {
@@ -291,7 +296,8 @@
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
-      flex-shrink: 0;
+      min-width: 0;
+      max-width: 100%;
     }
 
     .header-actions > button {
@@ -329,6 +335,7 @@
       gap: 2px;
       height: 36px;
       align-items: stretch;
+      max-width: 100%;
     }
 
     .btn-group button {
@@ -355,7 +362,7 @@
     .container {
       flex: 1;
       width: 100%;
-      max-width: none;
+      max-width: 100%;
       margin: 0;
       padding: 0;
       display: flex;
@@ -369,6 +376,7 @@
       grid-template-columns: var(--split-left) 12px 1fr;
       min-height: 0;
       position: relative;
+      max-width: 100%;
     }
 
     .workspace.mode-editor {
@@ -962,7 +970,8 @@
       body {
         height: auto;
         min-height: 100vh;
-        overflow: auto;
+        overflow-x: clip;
+        overflow-y: auto;
       }
       .workspace {
         grid-template-columns: 1fr;
@@ -983,11 +992,12 @@
 
     @media (max-width: 720px) {
       .header-inner {
-        padding: 10px 14px;
-        gap: 8px;
+        padding: 12px 18px;
+        gap: 10px;
       }
       .brand {
         gap: 8px;
+        flex: 1 1 100%;
       }
       .brand-logo {
         width: 32px;
@@ -1001,6 +1011,13 @@
         white-space: normal;
         overflow: visible;
         text-overflow: clip;
+      }
+      .file-badge {
+        max-width: 140px;
+      }
+      .header-actions {
+        width: 100%;
+        justify-content: flex-start;
       }
       .container {
         padding: 0;
