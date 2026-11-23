@@ -172,7 +172,7 @@
       display: none;
     }
 
-    /* Header (Reference Style) */
+    /* Header */
     .app-header {
       position: sticky;
       top: 0;
@@ -1140,7 +1140,7 @@
       </div>
 
       <div class="data-grid">
-        <div class="field" style="flex: 1;">
+        <div class="field">
           <label>📥 Import Markdown / Text</label>
           <label id="drop-zone" ondragover="handleModalDragOver(event)" ondragleave="handleModalDragLeave(event)" ondrop="handleModalDrop(event)" class="dropzone">
             <span style="font-size: 1.25rem;">📄</span>
@@ -1149,7 +1149,7 @@
           </label>
         </div>
 
-        <div class="field" style="flex: 1;">
+        <div class="field">
           <label>📤 Export Document</label>
           <div class="export-box">
             <span style="font-size: 1.25rem;">💾</span>
@@ -1213,6 +1213,9 @@ Start typing your Markdown here.
     const hljsTheme = document.getElementById("hljsTheme");
     const newDocBtn = document.getElementById("newDocBtn");
     const openDataModalBtn = document.getElementById("openDataModalBtn");
+    const dataModal = document.getElementById("data-modal");
+    const confirmModal = document.getElementById("confirm-modal");
+    const dropZone = document.getElementById("drop-zone");
 
     const tablePickerBtn = document.getElementById("tablePickerBtn");
     const tablePicker = document.getElementById("tablePicker");
@@ -1236,12 +1239,12 @@ Start typing your Markdown here.
 
     const outlineToggleBtn = document.getElementById("outlineToggleBtn");
     const outlineBar = document.getElementById("outlineBar");
+    const toastContainer = document.getElementById("toast-container");
 
     let pendingConfirmResolver = null;
     let lastModalTrigger = null;
     let renderDebounceTimer = null;
 
-    const toastContainer = document.getElementById("toast-container");
     function showToast(message, type = "info", duration = 3000) {
       if (!toastContainer) return;
       const el = document.createElement("div");
@@ -1272,13 +1275,13 @@ Start typing your Markdown here.
         const okBtn = document.getElementById("confirm-ok-btn");
         okBtn.textContent = confirmLabel;
         okBtn.className = danger ? "sm danger" : "sm primary";
-        document.getElementById("confirm-modal").classList.remove("hidden");
+        confirmModal.classList.remove("hidden");
         okBtn.focus();
       });
     }
 
     function closeConfirmModal(confirmed) {
-      document.getElementById("confirm-modal").classList.add("hidden");
+      confirmModal.classList.add("hidden");
       restoreModalFocus();
       if (pendingConfirmResolver) {
         const resolve = pendingConfirmResolver;
@@ -1289,31 +1292,24 @@ Start typing your Markdown here.
 
     function openDataModal() {
       lastModalTrigger = openDataModalBtn || document.activeElement;
-      document.getElementById("data-modal").classList.remove("hidden");
+      dataModal.classList.remove("hidden");
     }
 
     function closeDataModal() {
-      document.getElementById("data-modal").classList.add("hidden");
-      const dz = document.getElementById("drop-zone");
-      if (dz) dz.classList.remove("dragover");
+      dataModal.classList.add("hidden");
+      if (dropZone) dropZone.classList.remove("dragover");
       restoreModalFocus();
     }
 
     function handleBackdropClick(event, modalId) {
       if (event.target.id === modalId) {
-        if (modalId === "confirm-modal") {
-          closeConfirmModal(false);
-        } else if (modalId === "data-modal") {
-          closeDataModal();
-        }
+        if (modalId === "confirm-modal") closeConfirmModal(false);
+        else if (modalId === "data-modal") closeDataModal();
       }
     }
 
     if (typeof window.marked !== "undefined" && typeof window.marked.setOptions === "function") {
-      window.marked.setOptions({
-        gfm: true,
-        breaks: false
-      });
+      window.marked.setOptions({ gfm: true, breaks: false });
     }
 
     let syncScrollEnabled = true;
@@ -1403,8 +1399,7 @@ Start typing your Markdown here.
       if (!isResizingSplit) return;
       const rect = workspace.getBoundingClientRect();
       if (rect.width <= 0) return;
-      const offsetX = e.clientX - rect.left;
-      const pct = (offsetX / rect.width) * 100;
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
       setSplitRatio(pct);
     });
 
@@ -1433,9 +1428,7 @@ Start typing your Markdown here.
     fileNameBadge.addEventListener("click", () => {
       const current = fileNameBadge.textContent || "untitled.md";
       const next = window.prompt("Rename document:", current);
-      if (next !== null) {
-        renameDocument(next);
-      }
+      if (next !== null) renameDocument(next);
     });
 
     // Reset / New Document
@@ -1554,18 +1547,12 @@ Start typing your Markdown here.
 
     function setTablePickerOpen(open) {
       tablePicker.classList.toggle("open", open);
-      if (open) {
-        tableRowsInput.focus();
-      }
+      if (open) tableRowsInput.focus();
     }
 
     tablePickerBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       setTablePickerOpen(!tablePicker.classList.contains("open"));
-    });
-
-    window.addEventListener("resize", () => {
-      stopResizingSplit();
     });
 
     document.addEventListener("click", (e) => {
@@ -1581,94 +1568,6 @@ Start typing your Markdown here.
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
-    }
-
-    function formatFallbackInline(text) {
-      let out = escapeHtml(text);
-      out = out.replace(/`([^`\n]+)`/g, (_, code) => `<code>${code}</code>`);
-      out = out.replace(/\*\*\*([^*\n]+)\*\*\*/g, (_, inner) => `<strong><em>${inner}</em></strong>`);
-      out = out.replace(/\*\*([^*\n]+)\*\*/g, (_, inner) => `<strong>${inner}</strong>`);
-      out = out.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, (_, pre, inner) => `${pre}<em>${inner}</em>`);
-      out = out.replace(/~~([^~\n]+)~~/g, (_, inner) => `<del>${inner}</del>`);
-      return out;
-    }
-
-    function fallbackMarkdownToHtml(raw) {
-      const lines = raw.split("\n");
-      const html = [];
-      let inCodeBlock = false;
-      let inList = false;
-
-      for (const line of lines) {
-        if (/^\s*(`{3,}|~{3,})/.test(line)) {
-          if (inList) {
-            html.push("</ul>");
-            inList = false;
-          }
-          if (!inCodeBlock) {
-            inCodeBlock = true;
-            html.push("<pre><code>");
-          } else {
-            inCodeBlock = false;
-            html.push("</code></pre>");
-          }
-          continue;
-        }
-
-        if (inCodeBlock) {
-          html.push(escapeHtml(line) + "\n");
-          continue;
-        }
-
-        const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-        if (headingMatch) {
-          if (inList) {
-            html.push("</ul>");
-            inList = false;
-          }
-          const level = headingMatch[1].length;
-          html.push(`<h${level}>${formatFallbackInline(headingMatch[2])}</h${level}>`);
-          continue;
-        }
-
-        const taskMatch = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.*)$/);
-        if (taskMatch) {
-          if (!inList) {
-            html.push('<ul class="contains-task-list">');
-            inList = true;
-          }
-          const checked = taskMatch[1].toLowerCase() === "x" ? " checked" : "";
-          html.push(
-            `<li class="task-list-item"><input type="checkbox"${checked} /><span>${formatFallbackInline(taskMatch[2])}</span></li>`
-          );
-          continue;
-        }
-
-        const listMatch = line.match(/^\s*[-*+]\s+(.*)$/);
-        if (listMatch) {
-          if (!inList) {
-            html.push("<ul>");
-            inList = true;
-          }
-          html.push(`<li>${formatFallbackInline(listMatch[1])}</li>`);
-          continue;
-        }
-
-        if (inList) {
-          html.push("</ul>");
-          inList = false;
-        }
-
-        if (line.trim() === "") {
-          continue;
-        }
-
-        html.push(`<p>${formatFallbackInline(line)}</p>`);
-      }
-
-      if (inList) html.push("</ul>");
-      if (inCodeBlock) html.push("</code></pre>");
-      return html.join("\n");
     }
 
     function updateStats(text) {
@@ -1692,7 +1591,8 @@ Start typing your Markdown here.
       let activeFence = null;
       let activeFenceLen = 0;
 
-      lines.forEach((line, lineIndex) => {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const fenceMatch = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
         if (fenceMatch) {
           const marker = fenceMatch[1][0];
@@ -1702,24 +1602,23 @@ Start typing your Markdown here.
           if (!activeFence) {
             activeFence = marker;
             activeFenceLen = len;
-            return;
+            continue;
           }
           if (marker === activeFence && len >= activeFenceLen && trailing === "") {
             activeFence = null;
             activeFenceLen = 0;
-            return;
+            continue;
           }
         }
 
-        if (activeFence) return;
-        visitor(line, lineIndex);
-      });
+        if (!activeFence) visitor(line, i);
+      }
     }
 
     function getTaskLineIndices(markdown) {
       const indices = [];
       scanNonFencedLines(markdown, (line, lineIndex) => {
-        if (/^\s*(?:[-*+]|\d+\.)\s+\[[ xX]\]\s+/.test(line)) {
+        if (/^\s*(?:[-*+]|\d+\.)\s+\[[ xX]\]/.test(line)) {
           indices.push(lineIndex);
         }
       });
@@ -1832,12 +1731,48 @@ Start typing your Markdown here.
         return;
       }
       preview.querySelectorAll("pre code").forEach((block) => {
+        const rawCode = block.textContent || "";
+        if (block.dataset.highlighted === "yes" && block.dataset.sourceHash === rawCode) {
+          return;
+        }
         block.removeAttribute("data-highlighted");
         window.hljs.highlightElement(block);
+        block.dataset.highlighted = "yes";
+        block.dataset.sourceHash = rawCode;
       });
     }
 
+    preview.addEventListener("click", (e) => {
+      const cb = e.target instanceof Element ? e.target.closest('input[type="checkbox"]') : null;
+      if (!(cb instanceof HTMLInputElement)) return;
+
+      clearTimeout(renderDebounceTimer);
+
+      const checkboxes = Array.from(preview.querySelectorAll('input[type="checkbox"]'));
+      const taskIdx = checkboxes.indexOf(cb);
+      if (taskIdx < 0) return;
+
+      const taskLines = getTaskLineIndices(editor.value);
+      const lineIdx = taskLines[taskIdx];
+      if (lineIdx === undefined) return;
+
+      const lines = editor.value.split("\n");
+      const targetLine = lines[lineIdx];
+      if (typeof targetLine !== "string") return;
+
+      const updatedLine = targetLine.replace(
+        /(\s*(?:[-*+]|\d+\.)\s*\[)[ xX](\])/,
+        `$1${cb.checked ? "x" : " "}$2`
+      );
+      if (updatedLine === targetLine) return;
+
+      lines[lineIdx] = updatedLine;
+      editor.value = lines.join("\n");
+      renderMarkdown({ preserveScroll: true });
+    });
+
     function renderMarkdown({ preserveScroll = false, save = true, recordHistory = true } = {}) {
+      clearTimeout(renderDebounceTimer);
       const prevScrollTop = preserveScroll ? preview.scrollTop : 0;
       const raw = editor.value;
       updateStats(raw);
@@ -1851,46 +1786,24 @@ Start typing your Markdown here.
         const hasMarked = typeof window.marked !== "undefined" && typeof window.marked.parse === "function";
         const hasPurify = typeof window.DOMPurify !== "undefined" && typeof window.DOMPurify.sanitize === "function";
 
-        let renderedHtml;
-        if (hasMarked) {
-          const dirtyHtml = window.marked.parse(raw);
-          renderedHtml = hasPurify
-            ? window.DOMPurify.sanitize(dirtyHtml, {
-                ADD_ATTR: ["checked", "disabled", "type", "class"]
-              })
-            : dirtyHtml;
-        } else {
-          renderedHtml =
-            `<div class="fallback-banner">Offline/CDN fallback active: external Markdown parser did not load. Showing preview.</div>` +
-            fallbackMarkdownToHtml(raw);
+        if (!hasMarked) {
+          preview.innerHTML = `<div class="fallback-banner">Markdown parser failed to load. Check your connection and reload.</div>`;
+          return;
         }
 
-        preview.innerHTML = renderedHtml;
+        const dirtyHtml = window.marked.parse(raw);
+        preview.innerHTML = hasPurify
+          ? window.DOMPurify.sanitize(dirtyHtml, {
+              ADD_ATTR: ["checked", "disabled", "type", "class"]
+            })
+          : dirtyHtml;
+
+        preview.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.disabled = false;
+        });
+
         highlightCodeBlocks();
         addCopyCodeButtons();
-
-        const checkboxes = preview.querySelectorAll('li.task-list-item input[type="checkbox"]');
-        const taskLines = getTaskLineIndices(raw);
-
-        checkboxes.forEach((cb, idx) => {
-          cb.disabled = false;
-          cb.dataset.taskIndex = String(idx);
-          cb.addEventListener("change", () => {
-            const taskIdx = Number(cb.dataset.taskIndex);
-            const lineIdx = taskLines[taskIdx];
-            if (lineIdx === undefined) return;
-
-            withPreservedScroll(() => {
-              const lines = editor.value.split("\n");
-              lines[lineIdx] = lines[lineIdx].replace(
-                /(\s*(?:[-*+]|\d+\.)\s*\[)[ xX](\])/,
-                `$1${cb.checked ? "x" : " "}$2`
-              );
-              editor.value = lines.join("\n");
-              renderMarkdown({ preserveScroll: true });
-            });
-          });
-        });
 
         if (preserveScroll) {
           preview.scrollTop = prevScrollTop;
@@ -1904,9 +1817,10 @@ Start typing your Markdown here.
       updateStats(editor.value);
       updateCursorPosition();
       saveToStorage();
+      pushHistorySnapshot(editor.value, editor.selectionStart, editor.selectionEnd);
       clearTimeout(renderDebounceTimer);
       renderDebounceTimer = setTimeout(() => {
-        renderMarkdown({ preserveScroll: true });
+        renderMarkdown({ preserveScroll: true, recordHistory: false });
       }, delay);
     }
 
@@ -1975,13 +1889,7 @@ Start typing your Markdown here.
 
       const [start, end] = matchPositions[currentMatchIdx];
       const replacement = replaceInput.value;
-      replaceEditorRange(
-        start,
-        end,
-        replacement,
-        start + replacement.length,
-        start + replacement.length
-      );
+      replaceEditorRange(start, end, replacement, start + replacement.length, start + replacement.length);
       findInEditor(query, { keepIndex: true, selectMatch: false });
     }
 
@@ -2032,11 +1940,8 @@ Start typing your Markdown here.
           findInEditor(findInput.value);
           return;
         }
-        if (e.shiftKey) {
-          currentMatchIdx = (currentMatchIdx - 1 + matchPositions.length) % matchPositions.length;
-        } else {
-          currentMatchIdx = (currentMatchIdx + 1) % matchPositions.length;
-        }
+        const delta = e.shiftKey ? -1 + matchPositions.length : 1;
+        currentMatchIdx = (currentMatchIdx + delta) % matchPositions.length;
         selectCurrentMatch();
       }
     });
@@ -2117,17 +2022,13 @@ Start typing your Markdown here.
     }
 
     insertTableBtn.addEventListener("click", submitTablePicker);
-    tableRowsInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        submitTablePicker();
-      }
-    });
-    tableColsInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        submitTablePicker();
-      }
+    [tableRowsInput, tableColsInput].forEach((input) => {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitTablePicker();
+        }
+      });
     });
 
     function insertCodeBlock() {
@@ -2220,29 +2121,23 @@ Start typing your Markdown here.
     }
 
     document.querySelectorAll(".format-mini-bar button[data-heading]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        insertHeading(btn.getAttribute("data-heading"));
-      });
+      btn.addEventListener("click", () => insertHeading(btn.getAttribute("data-heading")));
     });
 
     document.querySelectorAll(".format-mini-bar button[data-prefix]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        prefixCurrentLine(btn.getAttribute("data-prefix"));
-      });
+      btn.addEventListener("click", () => prefixCurrentLine(btn.getAttribute("data-prefix")));
     });
 
     document.querySelectorAll(".format-mini-bar button[data-wrap]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        wrapSelection(btn.getAttribute("data-wrap"));
-      });
+      btn.addEventListener("click", () => wrapSelection(btn.getAttribute("data-wrap")));
     });
 
     document.querySelectorAll(".format-mini-bar button[data-action]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const action = btn.getAttribute("data-action");
         if (action === "link") insertLink();
-        if (action === "image") insertImage();
-        if (action === "codeblock") insertCodeBlock();
+        else if (action === "image") insertImage();
+        else if (action === "codeblock") insertCodeBlock();
       });
     });
 
@@ -2311,8 +2206,7 @@ Start typing your Markdown here.
       const maxTarget = target.scrollHeight - target.clientHeight;
       if (maxSource <= 0 || maxTarget <= 0) return;
 
-      const ratio = source.scrollTop / maxSource;
-      const desiredTop = ratio * maxTarget;
+      const desiredTop = (source.scrollTop / maxSource) * maxTarget;
       if (Math.abs(target.scrollTop - desiredTop) < 1) return;
 
       scrollLockOwner = ownerName;
@@ -2404,23 +2298,21 @@ Start typing your Markdown here.
     function handleModalDragOver(e) {
       e.preventDefault();
       e.stopPropagation();
-      document.getElementById("drop-zone").classList.add("dragover");
+      dropZone.classList.add("dragover");
     }
 
     function handleModalDragLeave(e) {
       e.preventDefault();
       e.stopPropagation();
-      document.getElementById("drop-zone").classList.remove("dragover");
+      dropZone.classList.remove("dragover");
     }
 
     function handleModalDrop(e) {
       e.preventDefault();
       e.stopPropagation();
-      document.getElementById("drop-zone").classList.remove("dragover");
-      const files = e.dataTransfer?.files;
-      if (files && files.length > 0) {
-        loadFile(files[0]);
-      }
+      dropZone.classList.remove("dragover");
+      const file = e.dataTransfer?.files?.[0];
+      if (file) loadFile(file);
     }
 
     // Global Drag and drop support
@@ -2451,9 +2343,7 @@ Start typing your Markdown here.
     window.addEventListener("dragleave", (e) => {
       if (!isFileDrag(e) && dragCounter === 0) return;
       dragCounter = Math.max(0, dragCounter - 1);
-      if (dragCounter <= 0) {
-        resetDragState();
-      }
+      if (dragCounter <= 0) resetDragState();
     });
 
     window.addEventListener("drop", (e) => {
@@ -2467,6 +2357,8 @@ Start typing your Markdown here.
       loadFile(file);
     });
 
+    window.addEventListener("resize", stopResizingSplit);
+
     window.addEventListener("blur", () => {
       stopResizingSplit();
       resetDragState();
@@ -2478,9 +2370,9 @@ Start typing your Markdown here.
         stopResizingSplit();
         resetDragState();
         setTablePickerOpen(false);
-        if (!document.getElementById("confirm-modal").classList.contains("hidden")) {
+        if (!confirmModal.classList.contains("hidden")) {
           closeConfirmModal(false);
-        } else if (!document.getElementById("data-modal").classList.contains("hidden")) {
+        } else if (!dataModal.classList.contains("hidden")) {
           closeDataModal();
         } else if (findBar.classList.contains("open")) {
           closeFindBar();
@@ -2581,13 +2473,9 @@ ${bodyHtml}
         }
       }
 
-      if (!copied) {
-        copied = fallbackExecCommandCopy(text);
-      }
+      if (!copied) copied = fallbackExecCommandCopy(text);
 
-      if (btn) {
-        flashExportLabel(btn, copied ? "Copied!" : "Copy failed");
-      }
+      if (btn) flashExportLabel(btn, copied ? "Copied!" : "Copy failed");
       showToast(copied ? successMsg : "Could not copy to clipboard", copied ? "success" : "error");
     }
 
@@ -2630,13 +2518,10 @@ ${bodyHtml}
     }
 
     document.querySelectorAll("[data-export]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const action = btn.getAttribute("data-export");
-        handleExportAction(action, btn);
-      });
+      btn.addEventListener("click", () => handleExportAction(btn.getAttribute("data-export"), btn));
     });
 
-    // Initial load from localStorage or blank starter
+    // Initial load from localStorage or starter
     let savedContent = null;
     let savedFilename = null;
     let savedTheme = "light";
